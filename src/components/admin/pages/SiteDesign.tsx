@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { Plus, Edit, Trash2, X, Save, GripVertical } from 'lucide-react'
+import { Plus, Edit, Trash2, X, Save, GripVertical, Eye } from 'lucide-react'
 import { mockNavLinks, mockFooterData } from '../adminData'
 
-const S = { bg:'#060E1A',card:'#0C1A2E',border:'#1A2E4A',gold:'#C9A84C',text:'#E2E8F4',muted:'#6B84A8',green:'#00D97E',red:'#FF4560' }
+const S = { bg:'#F1F5F9',card:'#FFFFFF',border:'#E2E8F0',gold:'#0EA5E9',text:'#1E293B',muted:'#64748B',green:'#059669',red:'#EF4444' }
 
 type NavLink = typeof mockNavLinks[0]
 
 function Toggle({on,onChange}:{on:boolean;onChange:(v:boolean)=>void}) {
-  return <div onClick={()=>onChange(!on)} style={{width:38,height:20,borderRadius:20,background:on?S.gold:'#1A2E4A',position:'relative',cursor:'pointer',transition:'background 0.3s',flexShrink:0}}>
+  return <div onClick={()=>onChange(!on)} style={{width:38,height:20,borderRadius:20,background:on?S.gold:'#E2E8F0',position:'relative',cursor:'pointer',transition:'background 0.3s',flexShrink:0}}>
     <div style={{position:'absolute',top:2,left:on?'auto':2,right:on?2:'auto',width:16,height:16,borderRadius:'50%',background:'white',transition:'all 0.3s'}}/>
   </div>
 }
@@ -65,7 +65,10 @@ export default function SiteDesign() {
           <h1 style={{fontSize:'1.4rem',fontWeight:800,color:S.text,margin:0}}>تصميم الموقع والتنقل</h1>
           <p style={{fontSize:'0.78rem',color:S.muted,marginTop:3}}>القائمة الرئيسية • الفوتر • الأزرار العائمة</p>
         </div>
-        <button onClick={save} style={{display:'flex',alignItems:'center',gap:6,padding:'9px 18px',background:saved?`rgba(0,217,126,0.15)`:`linear-gradient(135deg,${S.gold},#E8C96A)`,border:saved?`1px solid rgba(0,217,126,0.4)`:'none',borderRadius:8,color:saved?S.green:'#060E1A',fontWeight:700,fontSize:'0.82rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>
+        <button onClick={()=>window.open('/','_blank')} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(14,165,233,0.1)',border:'1px solid rgba(14,165,233,0.3)',borderRadius:8,color:'#0EA5E9',fontSize:'0.78rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>
+            <Eye size={13}/> معاينة
+          </button>
+        <button onClick={save} style={{display:'flex',alignItems:'center',gap:6,padding:'9px 18px',background:saved?`rgba(0,217,126,0.15)`:`linear-gradient(135deg,${S.gold},#38BDF8)`,border:saved?`1px solid rgba(0,217,126,0.4)`:'none',borderRadius:8,color:saved?S.green:'#FFFFFF',fontWeight:700,fontSize:'0.82rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>
           {saved ? '✓ تم الحفظ' : <><Save size={13}/> حفظ</>}
         </button>
       </div>
@@ -80,7 +83,7 @@ export default function SiteDesign() {
       {tab==='nav' && (
         <SectionCard title="🧭 القائمة الرئيسية" action={
           <button onClick={()=>{setIsNewLink(true);setEditLink({id:Date.now(),label:'',url:'/',type:'internal',target:'_self',hasMega:false,visible:true,order:links.length+1})}}
-            style={{display:'flex',alignItems:'center',gap:4,padding:'6px 12px',background:`rgba(201,168,76,0.1)`,border:`1px solid rgba(201,168,76,0.2)`,borderRadius:7,color:S.gold,fontSize:'0.75rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>
+            style={{display:'flex',alignItems:'center',gap:4,padding:'6px 12px',background:`rgba(14,165,233,0.1)`,border:`1px solid rgba(14,165,233,0.2)`,borderRadius:7,color:S.gold,fontSize:'0.75rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>
             <Plus size={12}/> رابط جديد
           </button>
         }>
@@ -94,10 +97,10 @@ export default function SiteDesign() {
                 </div>
                 <div style={{display:'flex',gap:4}}>
                   {l.hasMega && <span style={{fontSize:'0.6rem',background:'rgba(59,130,246,0.1)',color:'#3B82F6',borderRadius:4,padding:'2px 6px'}}>Mega Menu</span>}
-                  <span style={{fontSize:'0.6rem',background:'rgba(26,46,74,0.6)',color:S.muted,borderRadius:4,padding:'2px 6px'}}>{l.type}</span>
+                  <span style={{fontSize:'0.6rem',background:'rgba(203,213,225,0.8)',color:S.muted,borderRadius:4,padding:'2px 6px'}}>{l.type}</span>
                 </div>
                 <div style={{display:'flex',gap:4}}>
-                  <button onClick={()=>{setEditLink({...l});setIsNewLink(false)}} style={{width:26,height:26,background:`rgba(201,168,76,0.1)`,border:`1px solid rgba(201,168,76,0.2)`,borderRadius:6,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:S.gold}}><Edit size={10}/></button>
+                  <button onClick={()=>{setEditLink({...l});setIsNewLink(false)}} style={{width:26,height:26,background:`rgba(14,165,233,0.1)`,border:`1px solid rgba(14,165,233,0.2)`,borderRadius:6,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:S.gold}}><Edit size={10}/></button>
                   <button onClick={()=>delLink(l.id)} style={{width:26,height:26,background:`rgba(255,69,96,0.1)`,border:`1px solid rgba(255,69,96,0.2)`,borderRadius:6,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:S.red}}><Trash2 size={10}/></button>
                 </div>
                 <Toggle on={l.visible} onChange={()=>toggleLink(l.id)}/>
@@ -242,8 +245,8 @@ export default function SiteDesign() {
 
       {/* Edit Link Modal */}
       {editLink && (
-        <div style={{position:'fixed',inset:0,background:'rgba(6,14,26,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}} onClick={()=>setEditLink(null)}>
-          <div style={{background:'#0A1628',border:`1px solid ${S.border}`,borderRadius:16,width:'100%',maxWidth:500}} onClick={e=>e.stopPropagation()}>
+        <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.55)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:20}} onClick={()=>setEditLink(null)}>
+          <div style={{background:'#FFFFFF',border:`1px solid ${S.border}`,borderRadius:16,width:'100%',maxWidth:500}} onClick={e=>e.stopPropagation()}>
             <div style={{padding:'16px 20px',borderBottom:`1px solid ${S.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <span style={{fontWeight:700,color:S.text}}>{isNewLink?'رابط جديد':'تعديل الرابط'}</span>
               <button onClick={()=>setEditLink(null)} style={{background:'none',border:'none',cursor:'pointer',color:S.muted,display:'flex'}}><X size={18}/></button>
@@ -277,7 +280,7 @@ export default function SiteDesign() {
                   <span style={{fontSize:'0.78rem',color:S.text}}>ظاهر</span>
                 </div>
               </div>
-              <button onClick={()=>saveLink(editLink)} style={{width:'100%',padding:'11px',background:`linear-gradient(135deg,${S.gold},#E8C96A)`,border:'none',borderRadius:8,color:'#060E1A',fontWeight:800,cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontSize:'0.85rem'}}>
+              <button onClick={()=>saveLink(editLink)} style={{width:'100%',padding:'11px',background:`linear-gradient(135deg,${S.gold},#38BDF8)`,border:'none',borderRadius:8,color:'#FFFFFF',fontWeight:800,cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontSize:'0.85rem'}}>
                 💾 حفظ الرابط
               </button>
             </div>
