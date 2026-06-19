@@ -30,16 +30,16 @@ export default function Security() {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:20}}>
       <div>
-        <h1 style={{fontSize:'1.4rem',fontWeight:800,color:'#E2E8F4',margin:0}}>الأمان والسجلات</h1>
-        <p style={{fontSize:'0.78rem',color:'#6B84A8',marginTop:3}}>مراقبة النشاط وإدارة الأمان</p>
+        <h1 style={{fontSize:'1.4rem',fontWeight:800,color:'#1E293B',margin:0}}>الأمان والسجلات</h1>
+        <p style={{fontSize:'0.78rem',color:'#64748B',marginTop:3}}>مراقبة النشاط وإدارة الأمان</p>
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14}}>
         {summaryCards.map((s,i)=>(
-          <div key={i} style={{background:'#0C1A2E',border:'1px solid #1A2E4A',borderRadius:12,padding:16,display:'flex',alignItems:'center',gap:12}}>
+          <div key={i} style={{background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:12,padding:16,display:'flex',alignItems:'center',gap:12}}>
             <div style={{width:40,height:40,borderRadius:10,background:`${s.color}15`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.2rem',flexShrink:0}}>{s.icon}</div>
             <div>
-              <div style={{fontSize:'0.68rem',color:'#6B84A8',fontWeight:600}}>{s.label}</div>
+              <div style={{fontSize:'0.68rem',color:'#64748B',fontWeight:600}}>{s.label}</div>
               <div style={{fontSize:'1.3rem',fontWeight:800,color:s.color,fontFamily:'monospace'}}>{s.value}</div>
             </div>
           </div>
@@ -47,9 +47,9 @@ export default function Security() {
       </div>
 
       {/* Tabs */}
-      <div style={{display:'flex',gap:4,background:'#0C1A2E',border:'1px solid #1A2E4A',borderRadius:10,padding:4,width:'fit-content'}}>
+      <div style={{display:'flex',gap:4,background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:10,padding:4,width:'fit-content'}}>
         {([{k:'logs',l:'سجلات النشاط'},{k:'sessions',l:'الجلسات النشطة'},{k:'threats',l:'التهديدات'},{k:'settings',l:'إعدادات الأمان'}] as const).map(t=>(
-          <button key={t.k} onClick={()=>setActiveTab(t.k)} style={{padding:'7px 16px',background: activeTab===t.k ? '#060E1A' : 'transparent',border:'none',borderRadius:7,color: activeTab===t.k ? '#E2E8F4' : '#6B84A8',fontSize:'0.78rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif",whiteSpace:'nowrap',fontWeight: activeTab===t.k ? 600 : 400}}>
+          <button key={t.k} onClick={()=>setActiveTab(t.k)} style={{padding:'7px 16px',background: activeTab===t.k ? '#F1F5F9' : 'transparent',border:'none',borderRadius:7,color: activeTab===t.k ? '#1E293B' : '#64748B',fontSize:'0.78rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif",whiteSpace:'nowrap',fontWeight: activeTab===t.k ? 600 : 400}}>
             {t.l}
           </button>
         ))}
@@ -57,11 +57,11 @@ export default function Security() {
 
       {/* Activity Logs */}
       {activeTab==='logs' && (
-        <div style={{background:'#0C1A2E',border:'1px solid #1A2E4A',borderRadius:14,overflow:'hidden'}}>
-          <div style={{padding:'12px 16px',borderBottom:'1px solid #1A2E4A',display:'flex',gap:8,alignItems:'center'}}>
-            <div style={{display:'flex',gap:2,background:'#060E1A',borderRadius:8,padding:3}}>
+        <div style={{background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:14,overflow:'hidden'}}>
+          <div style={{padding:'12px 16px',borderBottom:'1px solid #E2E8F0',display:'flex',gap:8,alignItems:'center'}}>
+            <div style={{display:'flex',gap:2,background:'#F1F5F9',borderRadius:8,padding:3}}>
               {[{k:'all',l:'الكل'},{k:'success',l:'ناجح'},{k:'failed',l:'فاشل'}].map(t=>(
-                <button key={t.k} onClick={()=>setLogFilter(t.k)} style={{padding:'5px 10px',background: logFilter===t.k ? '#0C1A2E' : 'transparent',border:'none',borderRadius:6,color: logFilter===t.k ? '#E2E8F4' : '#6B84A8',fontSize:'0.72rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>{t.l}</button>
+                <button key={t.k} onClick={()=>setLogFilter(t.k)} style={{padding:'5px 10px',background: logFilter===t.k ? '#F8FAFC' : 'transparent',border:'none',borderRadius:6,color: logFilter===t.k ? '#1E293B' : '#64748B',fontSize:'0.72rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>{t.l}</button>
               ))}
             </div>
           </div>
@@ -69,18 +69,18 @@ export default function Security() {
             <table style={{width:'100%',borderCollapse:'collapse',minWidth:700}}>
               <thead>
                 <tr>{['الوقت','المستخدم','الحدث','عنوان IP','الموقع','الحالة'].map(h=>(
-                  <th key={h} style={{padding:'10px 14px',textAlign:'right',fontSize:'0.7rem',fontWeight:600,color:'#6B84A8',borderBottom:'1px solid #1A2E4A',background:'#060E1A',whiteSpace:'nowrap'}}>{h}</th>
+                  <th key={h} style={{padding:'10px 14px',textAlign:'right',fontSize:'0.7rem',fontWeight:600,color:'#64748B',borderBottom:'1px solid #E2E8F0',background:'#F1F5F9',whiteSpace:'nowrap'}}>{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {filteredLogs.map(log=>(
-                  <tr key={log.id} onMouseEnter={e=>e.currentTarget.style.background='rgba(201,168,76,0.03)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                    <td style={{padding:'10px 14px',fontSize:'0.75rem',color:'#6B84A8',borderBottom:'1px solid rgba(26,46,74,0.4)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{log.time}</td>
-                    <td style={{padding:'10px 14px',fontSize:'0.8rem',color:'#E2E8F4',borderBottom:'1px solid rgba(26,46,74,0.4)',fontWeight:600}}>{log.user}</td>
-                    <td style={{padding:'10px 14px',fontSize:'0.78rem',color:'#E2E8F4',borderBottom:'1px solid rgba(26,46,74,0.4)'}}>{log.event}</td>
-                    <td style={{padding:'10px 14px',fontSize:'0.72rem',color:'#6B84A8',borderBottom:'1px solid rgba(26,46,74,0.4)',fontFamily:'monospace'}}>{log.ip}</td>
-                    <td style={{padding:'10px 14px',fontSize:'0.72rem',color:'#6B84A8',borderBottom:'1px solid rgba(26,46,74,0.4)'}}>{log.ip.startsWith('197') ? '🇸🇦 الرياض' : log.ip==='localhost' ? '🖥️ محلي' : '🌍 خارجي'}</td>
-                    <td style={{padding:'10px 14px',borderBottom:'1px solid rgba(26,46,74,0.4)'}}>
+                  <tr key={log.id} onMouseEnter={e=>e.currentTarget.style.background='rgba(14,165,233,0.03)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <td style={{padding:'10px 14px',fontSize:'0.75rem',color:'#64748B',borderBottom:'1px solid rgba(203,213,225,0.6)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{log.time}</td>
+                    <td style={{padding:'10px 14px',fontSize:'0.8rem',color:'#1E293B',borderBottom:'1px solid rgba(203,213,225,0.6)',fontWeight:600}}>{log.user}</td>
+                    <td style={{padding:'10px 14px',fontSize:'0.78rem',color:'#1E293B',borderBottom:'1px solid rgba(203,213,225,0.6)'}}>{log.event}</td>
+                    <td style={{padding:'10px 14px',fontSize:'0.72rem',color:'#64748B',borderBottom:'1px solid rgba(203,213,225,0.6)',fontFamily:'monospace'}}>{log.ip}</td>
+                    <td style={{padding:'10px 14px',fontSize:'0.72rem',color:'#64748B',borderBottom:'1px solid rgba(203,213,225,0.6)'}}>{log.ip.startsWith('197') ? '🇸🇦 الرياض' : log.ip==='localhost' ? '🖥️ محلي' : '🌍 خارجي'}</td>
+                    <td style={{padding:'10px 14px',borderBottom:'1px solid rgba(203,213,225,0.6)'}}>
                       <span style={{padding:'3px 9px',borderRadius:20,fontSize:'0.68rem',fontWeight:600,background: log.status==='success'?'rgba(0,217,126,0.1)':'rgba(255,69,96,0.1)',color: log.status==='success'?'#00D97E':'#FF4560'}}>{log.status==='success'?'ناجح':'فاشل'}</span>
                     </td>
                   </tr>
@@ -95,15 +95,15 @@ export default function Security() {
       {activeTab==='sessions' && (
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
           {sessions.map((s,i)=>(
-            <div key={i} style={{background:'#0C1A2E',border:`1px solid ${s.current ? 'rgba(0,217,126,0.3)' : '#1A2E4A'}`,borderRadius:12,padding:'16px 20px',display:'flex',alignItems:'center',gap:14}}>
+            <div key={i} style={{background:'#F8FAFC',border:`1px solid ${s.current ? 'rgba(0,217,126,0.3)' : '#E2E8F0'}`,borderRadius:12,padding:'16px 20px',display:'flex',alignItems:'center',gap:14}}>
               <span style={{fontSize:'1.8rem',flexShrink:0}}>{s.device}</span>
               <div style={{flex:1}}>
                 <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-                  <span style={{fontSize:'0.85rem',fontWeight:700,color:'#E2E8F4'}}>{s.name}</span>
+                  <span style={{fontSize:'0.85rem',fontWeight:700,color:'#1E293B'}}>{s.name}</span>
                   {s.current && <span style={{background:'rgba(0,217,126,0.1)',color:'#00D97E',borderRadius:10,padding:'2px 8px',fontSize:'0.65rem',fontWeight:700}}>الجلسة الحالية</span>}
                 </div>
-                <div style={{display:'flex',gap:16,fontSize:'0.72rem',color:'#6B84A8'}}>
-                  <span>IP: <span style={{fontFamily:'monospace',color:'#E2E8F4'}}>{s.ip}</span></span>
+                <div style={{display:'flex',gap:16,fontSize:'0.72rem',color:'#64748B'}}>
+                  <span>IP: <span style={{fontFamily:'monospace',color:'#1E293B'}}>{s.ip}</span></span>
                   <span>{s.location}</span>
                   <span>{s.time}</span>
                 </div>
@@ -127,14 +127,14 @@ export default function Security() {
             <span style={{fontSize:'0.82rem',color:'#FF4560',fontWeight:600}}>تم اكتشاف {threats.length} IPs مشبوهة — حظر تلقائي مفعّل</span>
           </div>
           {threats.map((t,i)=>(
-            <div key={i} style={{background:'#0C1A2E',border:'1px solid #1A2E4A',borderRadius:12,padding:'16px 20px',display:'flex',alignItems:'center',gap:14}}>
+            <div key={i} style={{background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:12,padding:'16px 20px',display:'flex',alignItems:'center',gap:14}}>
               <div style={{width:40,height:40,borderRadius:10,background:'rgba(255,69,96,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.1rem',flexShrink:0}}>🚨</div>
               <div style={{flex:1}}>
                 <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:4}}>
-                  <span style={{fontFamily:'monospace',fontWeight:700,color:'#E2E8F4',fontSize:'0.85rem'}}>{t.ip}</span>
-                  <span style={{fontSize:'0.78rem',color:'#6B84A8'}}>{t.country}</span>
+                  <span style={{fontFamily:'monospace',fontWeight:700,color:'#1E293B',fontSize:'0.85rem'}}>{t.ip}</span>
+                  <span style={{fontSize:'0.78rem',color:'#64748B'}}>{t.country}</span>
                 </div>
-                <div style={{fontSize:'0.72rem',color:'#6B84A8'}}>{t.attempts} محاولة فاشلة · آخر محاولة: {t.lastAttempt}</div>
+                <div style={{fontSize:'0.72rem',color:'#64748B'}}>{t.attempts} محاولة فاشلة · آخر محاولة: {t.lastAttempt}</div>
               </div>
               <span style={{padding:'4px 12px',borderRadius:20,fontSize:'0.7rem',fontWeight:700,background: t.status==='محظور' ? 'rgba(255,69,96,0.1)' : 'rgba(245,158,11,0.1)',color: t.status==='محظور' ? '#FF4560' : '#F59E0B'}}>{t.status}</span>
               <button style={{padding:'7px 14px',background:'rgba(255,69,96,0.1)',border:'1px solid rgba(255,69,96,0.3)',borderRadius:7,color:'#FF4560',fontSize:'0.72rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>حظر دائم</button>
@@ -152,16 +152,16 @@ export default function Security() {
             {title:'القيود الجغرافية',icon:'🌍',items:[{label:'السماح فقط بدول الخليج',on:false},{label:'حظر IPs المشبوهة تلقائياً',on:true},{label:'تسجيل كل الدخولات',on:true}]},
             {title:'إعدادات الجلسة',icon:'⏱️',items:[{label:'انتهاء بعد 30 دقيقة خمول',on:true},{label:'جلسة واحدة في كل وقت',on:false},{label:'إشعار عند تسجيل دخول جديد',on:true}]},
           ].map((section,si)=>(
-            <div key={si} style={{background:'#0C1A2E',border:'1px solid #1A2E4A',borderRadius:14,overflow:'hidden'}}>
-              <div style={{padding:'14px 16px',borderBottom:'1px solid #1A2E4A',display:'flex',alignItems:'center',gap:8}}>
+            <div key={si} style={{background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:14,overflow:'hidden'}}>
+              <div style={{padding:'14px 16px',borderBottom:'1px solid #E2E8F0',display:'flex',alignItems:'center',gap:8}}>
                 <span style={{fontSize:'1.1rem'}}>{section.icon}</span>
-                <span style={{fontSize:'0.85rem',fontWeight:700,color:'#E2E8F4'}}>{section.title}</span>
+                <span style={{fontSize:'0.85rem',fontWeight:700,color:'#1E293B'}}>{section.title}</span>
               </div>
               <div style={{padding:'4px 0'}}>
                 {section.items.map((item,ii)=>(
-                  <div key={ii} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 16px',borderBottom: ii<section.items.length-1 ? '1px solid rgba(26,46,74,0.3)' : 'none'}}>
-                    <span style={{fontSize:'0.78rem',color:'#E2E8F4'}}>{item.label}</span>
-                    <div style={{width:40,height:22,borderRadius:22,background: item.on ? '#C9A84C' : '#1A2E4A',position:'relative',cursor:'pointer',transition:'background 0.3s',flexShrink:0}}>
+                  <div key={ii} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 16px',borderBottom: ii<section.items.length-1 ? '1px solid rgba(203,213,225,0.5)' : 'none'}}>
+                    <span style={{fontSize:'0.78rem',color:'#1E293B'}}>{item.label}</span>
+                    <div style={{width:40,height:22,borderRadius:22,background: item.on ? '#0EA5E9' : '#E2E8F0',position:'relative',cursor:'pointer',transition:'background 0.3s',flexShrink:0}}>
                       <div style={{position:'absolute',top:3,left: item.on ? 'auto' : 3,right: item.on ? 3 : 'auto',width:16,height:16,borderRadius:'50%',background:'white',transition:'all 0.3s'}}/>
                     </div>
                   </div>
