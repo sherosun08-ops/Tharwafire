@@ -41,9 +41,46 @@ export default function Clients() {
   const [catFilter, setCatFilter] = useState('all')
   const [selected, setSelected] = useState<number[]>([])
   const [viewClient, setViewClient] = useState<typeof mockClients[0]|null>(null)
+  const [editClient, setEditClient] = useState<typeof mockClients[0]|null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number|null>(null)
+  const [clients, setClients] = useState([...mockClients])
+  const [accounts, setAccounts] = useState([...mockClientAccounts])
+  const [kycAction, setKycAction] = useState<Record<number,string>>({})
+  const [toast, setToast] = useState<{msg:string;type:'ok'|'err'}|null>(null)
   const [accountSearch, setAccountSearch] = useState('')
   const [copiedId, setCopiedId] = useState<number|null>(null)
   const [showPass, setShowPass] = useState<Record<number,boolean>>({})
+  const [resetPassId, setResetPassId] = useState<number|null>(null)
+
+  const showToast = (msg:string, type:'ok'|'err'='ok') => {
+    setToast({msg,type})
+    setTimeout(()=>setToast(null),3000)
+  }
+
+  const handleKYC = (id:number, action:'accept'|'reject') => {
+    setKycAction(p=>({...p,[id]:action}))
+    setClients(prev=>prev.map(c=>c.id===id?{...c,status:action==='accept'?'active':'inactive'}:c))
+    showToast(action==='accept'?'✅ تم قبول العميل بنجاح':'❌ تم رفض طلب العميل')
+  }
+
+  const handleDeleteClient = (id:number) => {
+    setClients(prev=>prev.filter(c=>c.id!==id))
+    setDeleteConfirmId(null)
+    showToast('🗑️ تم حذف العميل بنجاح')
+  }
+
+  const handleToggleAccountStatus = (id:number) => {
+    setAccounts(prev=>prev.map(a=>a.id===id?{...a,status:a.status==='active'?'suspended':'active'}:a))
+    showToast('✅ تم تحديث حالة الحساب')
+  }
+
+  const handleResetPassword = (id:number) => {
+    const newPass = generatePassword()
+    setAccounts(prev=>prev.map(a=>a.id===id?{...a,password:newPass}:a))
+    setResetPassId(id)
+    setTimeout(()=>setResetPassId(null),3000)
+    showToast('🔑 تم إعادة تعيين كلمة المرور')
+  }
 
   // Create Account form state
   const [form, setForm] = useState({
@@ -56,29 +93,29 @@ export default function Clients() {
   })
   const [formSaved, setFormSaved] = useState(false)
 
-  const filtered = mockClients.filter(c => {
+  const filtered = clients.filter(c => {
     if (search && !c.name.includes(search) && !c.email.includes(search) && !c.city.includes(search)) return false
     if (statusFilter !== 'all' && c.status !== statusFilter) return false
     if (catFilter !== 'all' && c.category !== catFilter) return false
     return true
   })
 
-  const filteredAccounts = mockClientAccounts.filter(a =>
+  const filteredAccounts = accounts.filter(a =>
     !accountSearch || a.name.includes(accountSearch) || a.email.includes(accountSearch)
   )
 
   const tabs = [
-    {key:'all',label:'الكل',count:mockClients.length},
-    {key:'active',label:'نشط',count:mockClients.filter(c=>c.status==='active').length},
-    {key:'pending',label:'معلق',count:mockClients.filter(c=>c.status==='pending').length},
-    {key:'frozen',label:'مجمد',count:mockClients.filter(c=>c.status==='frozen').length},
+    {key:'all',label:'الكل',count:clients.length},
+    {key:'active',label:'نشط',count:clients.filter(c=>c.status==='active').length},
+    {key:'pending',label:'معلق',count:clients.filter(c=>c.status==='pending').length},
+    {key:'frozen',label:'مجمد',count:clients.filter(c=>c.status==='frozen').length},
   ]
 
   const stats = [
-    {label:'إجمالي العملاء',value:mockClients.length,icon:'👥',color:'#3B82F6'},
-    {label:'عملاء نشطون',value:mockClients.filter(c=>c.status==='active').length,icon:'✅',color:'#00D97E'},
-    {label:'حسابات مفعّلة',value:mockClientAccounts.filter(a=>a.status==='active').length,icon:'🔑',color:'#0EA5E9'},
-    {label:'إجمالي المحافظ',value:'$' + (mockClients.reduce((s,c)=>s+c.portfolio,0)/1000).toFixed(0) + 'K',icon:'💰',color:'#C9A84C'},
+    {label:'إجمالي العملاء',value:clients.length,icon:'👥',color:'#3B82F6'},
+    {label:'عملاء نشطون',value:clients.filter(c=>c.status==='active').length,icon:'✅',color:'#00D97E'},
+    {label:'حسابات مفعّلة',value:accounts.filter(a=>a.status==='active').length,icon:'🔑',color:'#0EA5E9'},
+    {label:'إجمالي المحافظ',value:'$' + (clients.reduce((s,c)=>s+c.portfolio,0)/1000).toFixed(0) + 'K',icon:'💰',color:'#C9A84C'},
   ]
 
   const toggleSelect = (id:number) => setSelected(s => s.includes(id) ? s.filter(x=>x!==id) : [...s,id])
@@ -159,29 +196,35 @@ export default function Clients() {
       {mainTab === 'list' && (
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
           {/* KYC Pending */}
-          {mockClients.filter(c=>c.status==='pending').length > 0 && (
+          {clients.filter(c=>c.status==='pending').length > 0 && (
             <div style={{background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:12,padding:'12px 16px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
                   <span>⚠️</span>
                   <span style={{fontSize:'0.82rem',fontWeight:700,color:'#F59E0B'}}>طلبات KYC معلقة</span>
                   <span style={{background:'rgba(245,158,11,0.2)',color:'#F59E0B',borderRadius:10,padding:'2px 8px',fontSize:'0.65rem',fontWeight:700}}>
-                    {mockClients.filter(c=>c.status==='pending').length}
+                    {clients.filter(c=>c.status==='pending').length}
                   </span>
                 </div>
                 <button style={{fontSize:'0.72rem',color:'#F59E0B',background:'none',border:'1px solid rgba(245,158,11,0.3)',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>مراجعة الكل</button>
               </div>
               <div style={{display:'flex',gap:10}}>
-                {mockClients.filter(c=>c.status==='pending').slice(0,3).map(c=>(
+                {clients.filter(c=>c.status==='pending').slice(0,3).map(c=>(
                   <div key={c.id} style={{flex:1,background:'#FFFFFF',border:'1px solid #E2E8F0',borderRadius:8,padding:'10px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
                     <div>
                       <div style={{fontSize:'0.78rem',fontWeight:600,color:'#1E293B'}}>{c.name}</div>
                       <div style={{fontSize:'0.65rem',color:'#64748B',marginTop:2}}>{c.country} {c.city} · {c.joined}</div>
                     </div>
-                    <div style={{display:'flex',gap:5}}>
-                      <button style={{padding:'4px 9px',background:'rgba(0,217,126,0.1)',border:'1px solid rgba(0,217,126,0.3)',borderRadius:5,color:'#00D97E',fontSize:'0.65rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>قبول</button>
-                      <button style={{padding:'4px 9px',background:'rgba(255,69,96,0.1)',border:'1px solid rgba(255,69,96,0.3)',borderRadius:5,color:'#FF4560',fontSize:'0.65rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>رفض</button>
-                    </div>
+                    {kycAction[c.id] ? (
+                      <span style={{fontSize:'0.7rem',fontWeight:700,color:kycAction[c.id]==='accept'?'#00D97E':'#FF4560'}}>
+                        {kycAction[c.id]==='accept'?'✅ مقبول':'❌ مرفوض'}
+                      </span>
+                    ) : (
+                      <div style={{display:'flex',gap:5}}>
+                        <button onClick={()=>handleKYC(c.id,'accept')} style={{padding:'4px 9px',background:'rgba(0,217,126,0.1)',border:'1px solid rgba(0,217,126,0.3)',borderRadius:5,color:'#00D97E',fontSize:'0.65rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>قبول</button>
+                        <button onClick={()=>handleKYC(c.id,'reject')} style={{padding:'4px 9px',background:'rgba(255,69,96,0.1)',border:'1px solid rgba(255,69,96,0.3)',borderRadius:5,color:'#FF4560',fontSize:'0.65rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>رفض</button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -259,12 +302,13 @@ export default function Clients() {
                       <td style={{...C.td,fontSize:'0.72rem',color:'#64748B',whiteSpace:'nowrap'}}>{c.lastActive}</td>
                       <td style={C.td}>
                         <div style={{display:'flex',gap:5}}>
-                          <button onClick={()=>setViewClient(c)} style={{width:28,height:28,background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:6,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#3B82F6'}}><Eye size={12}/></button>
-                          <button style={{width:28,height:28,background:'rgba(14,165,233,0.1)',border:'1px solid rgba(14,165,233,0.2)',borderRadius:6,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#0EA5E9'}}><Edit size={12}/></button>
+                          <button onClick={()=>setViewClient(c)} style={{width:28,height:28,background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:6,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#3B82F6'}} title="عرض"><Eye size={12}/></button>
+                          <button onClick={()=>setEditClient(c)} style={{width:28,height:28,background:'rgba(14,165,233,0.1)',border:'1px solid rgba(14,165,233,0.2)',borderRadius:6,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#0EA5E9'}} title="تعديل"><Edit size={12}/></button>
                           <button onClick={()=>{ setForm(f=>({...f,clientId:c.id.toString(),email:c.email.replace('@email.com','@tharwah.com')})); setMainTab('create_account') }}
                             style={{width:28,height:28,background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.2)',borderRadius:6,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#C9A84C'}} title="إنشاء حساب دخول">
                             <Key size={12}/>
                           </button>
+                          <button onClick={()=>setDeleteConfirmId(c.id)} style={{width:28,height:28,background:'rgba(255,69,96,0.1)',border:'1px solid rgba(255,69,96,0.2)',borderRadius:6,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#FF4560'}} title="حذف"><Trash2 size={12}/></button>
                         </div>
                       </td>
                     </tr>
@@ -366,9 +410,15 @@ export default function Clients() {
                       <td style={{...C.td,fontSize:'0.72rem',color:'#64748B'}}>{a.createdBy}</td>
                       <td style={C.td}>
                         <div style={{display:'flex',gap:4}}>
-                          <button style={{width:26,height:26,background:'rgba(14,165,233,0.1)',border:'1px solid rgba(14,165,233,0.2)',borderRadius:5,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#0EA5E9',title:'تعديل'}}><Edit size={11}/></button>
-                          <button style={{width:26,height:26,background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:5,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#F59E0B',title:'إعادة تعيين كلمة المرور'}}><RefreshCw size={11}/></button>
-                          <button style={{width:26,height:26,background:'rgba(255,69,96,0.1)',border:'1px solid rgba(255,69,96,0.2)',borderRadius:5,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#FF4560',title:'إيقاف الحساب'}}><Trash2 size={11}/></button>
+                          <button title="تعديل" style={{width:26,height:26,background:'rgba(14,165,233,0.1)',border:'1px solid rgba(14,165,233,0.2)',borderRadius:5,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#0EA5E9'}}><Edit size={11}/></button>
+                          <button title="إعادة تعيين كلمة المرور" onClick={()=>handleResetPassword(a.id)}
+                            style={{width:26,height:26,background:resetPassId===a.id?'rgba(0,217,126,0.15)':'rgba(245,158,11,0.1)',border:`1px solid ${resetPassId===a.id?'rgba(0,217,126,0.3)':'rgba(245,158,11,0.2)'}`,borderRadius:5,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:resetPassId===a.id?'#00D97E':'#F59E0B'}}>
+                            {resetPassId===a.id?<Check size={11}/>:<RefreshCw size={11}/>}
+                          </button>
+                          <button title={a.status==='active'?'إيقاف الحساب':'تفعيل الحساب'} onClick={()=>handleToggleAccountStatus(a.id)}
+                            style={{width:26,height:26,background:a.status==='active'?'rgba(255,69,96,0.1)':'rgba(0,217,126,0.1)',border:`1px solid ${a.status==='active'?'rgba(255,69,96,0.2)':'rgba(0,217,126,0.2)'}`,borderRadius:5,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:a.status==='active'?'#FF4560':'#00D97E'}}>
+                            {a.status==='active'?<Trash2 size={11}/>:<Check size={11}/>}
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -563,15 +613,101 @@ export default function Clients() {
                 ))}
               </div>
               <div style={{display:'flex',gap:8,marginTop:16}}>
-                <button style={{flex:1,padding:'10px',background:'linear-gradient(135deg,#0EA5E9,#38BDF8)',border:'none',borderRadius:8,color:'#FFF',fontWeight:700,cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontSize:'0.82rem'}}>تعديل البيانات</button>
+                <button onClick={()=>{ setEditClient(viewClient); setViewClient(null) }}
+                  style={{flex:1,padding:'10px',background:'linear-gradient(135deg,#0EA5E9,#38BDF8)',border:'none',borderRadius:8,color:'#FFF',fontWeight:700,cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontSize:'0.82rem'}}>تعديل البيانات</button>
                 <button onClick={()=>{ setForm(f=>({...f,clientId:viewClient.id.toString(),email:viewClient.email.replace('@email.com','@tharwah.com')})); setViewClient(null); setMainTab('create_account') }}
                   style={{flex:1,padding:'10px',background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.3)',borderRadius:8,color:'#C9A84C',cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontSize:'0.82rem'}}>
                   🔑 إنشاء حساب
                 </button>
-                <button style={{flex:1,padding:'10px',background:'rgba(0,217,126,0.1)',border:'1px solid rgba(0,217,126,0.3)',borderRadius:8,color:'#00D97E',cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontSize:'0.82rem'}}>📊 تقرير</button>
+                <button onClick={()=>{ showToast('📄 تم تجهيز التقرير بنجاح'); setViewClient(null) }}
+                  style={{flex:1,padding:'10px',background:'rgba(0,217,126,0.1)',border:'1px solid rgba(0,217,126,0.3)',borderRadius:8,color:'#00D97E',cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontSize:'0.82rem'}}>📊 تقرير</button>
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirm Modal ── */}
+      {deleteConfirmId !== null && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:'#FFFFFF',borderRadius:16,padding:28,width:360,textAlign:'center',boxShadow:'0 25px 50px rgba(0,0,0,0.2)'}}>
+            <div style={{fontSize:'2rem',marginBottom:12}}>🗑️</div>
+            <div style={{fontSize:'1rem',fontWeight:800,color:'#1E293B',marginBottom:8}}>تأكيد الحذف</div>
+            <div style={{fontSize:'0.82rem',color:'#64748B',marginBottom:22}}>
+              هل أنت متأكد من حذف العميل؟ لا يمكن التراجع عن هذا الإجراء.
+            </div>
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>setDeleteConfirmId(null)}
+                style={{flex:1,padding:'10px',border:'1px solid #E2E8F0',borderRadius:9,background:'#F8FAFC',cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontWeight:600,fontSize:'0.83rem',color:'#64748B'}}>
+                إلغاء
+              </button>
+              <button onClick={()=>handleDeleteClient(deleteConfirmId)}
+                style={{flex:1,padding:'10px',border:'none',borderRadius:9,background:'linear-gradient(135deg,#EF4444,#DC2626)',cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontWeight:700,fontSize:'0.83rem',color:'#FFF'}}>
+                تأكيد الحذف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Client Modal ── */}
+      {editClient !== null && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div style={{background:'#FFFFFF',borderRadius:16,padding:28,width:'100%',maxWidth:540,boxShadow:'0 25px 50px rgba(0,0,0,0.2)',maxHeight:'90vh',overflowY:'auto'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+              <div style={{fontWeight:800,fontSize:'1rem',color:'#1E293B'}}>تعديل بيانات العميل</div>
+              <button onClick={()=>setEditClient(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#94A3B8'}}>✕</button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+              {[
+                {k:'name',l:'الاسم الكامل'},
+                {k:'email',l:'البريد الإلكتروني'},
+                {k:'phone',l:'رقم الهاتف'},
+                {k:'city',l:'المدينة'},
+                {k:'advisor',l:'المستشار'},
+              ].map(f=>(
+                <div key={f.k}>
+                  <label style={{display:'block',fontSize:'0.72rem',fontWeight:700,color:'#475569',marginBottom:5}}>{f.l}</label>
+                  <input value={(editClient as any)[f.k]} onChange={e=>setEditClient((prev:any)=>({...prev,[f.k]:e.target.value}))}
+                    style={{width:'100%',padding:'9px 12px',background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,color:'#1E293B',fontSize:'0.82rem',outline:'none',fontFamily:"'Cairo',sans-serif",boxSizing:'border-box'}}/>
+                </div>
+              ))}
+              <div>
+                <label style={{display:'block',fontSize:'0.72rem',fontWeight:700,color:'#475569',marginBottom:5}}>الحالة</label>
+                <select value={editClient.status} onChange={e=>setEditClient((prev:any)=>({...prev,status:e.target.value}))}
+                  style={{width:'100%',padding:'9px 12px',background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:8,color:'#1E293B',fontSize:'0.82rem',cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>
+                  <option value="active">نشط</option>
+                  <option value="pending">معلق</option>
+                  <option value="frozen">مجمد</option>
+                  <option value="inactive">غير نشط</option>
+                </select>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:10,marginTop:20}}>
+              <button onClick={()=>setEditClient(null)}
+                style={{flex:1,padding:'10px',border:'1px solid #E2E8F0',borderRadius:9,background:'#F8FAFC',cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontWeight:600,fontSize:'0.83rem',color:'#64748B'}}>
+                إلغاء
+              </button>
+              <button onClick={()=>{
+                setClients(prev=>prev.map(c=>c.id===editClient.id?{...editClient}:c))
+                setEditClient(null)
+                showToast('✅ تم حفظ التعديلات بنجاح')
+              }}
+                style={{flex:1,padding:'10px',border:'none',borderRadius:9,background:'linear-gradient(135deg,#0EA5E9,#38BDF8)',cursor:'pointer',fontFamily:"'Cairo',sans-serif",fontWeight:700,fontSize:'0.83rem',color:'#FFF'}}>
+                حفظ التعديلات
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div style={{position:'fixed',bottom:28,right:28,zIndex:300,padding:'12px 20px',borderRadius:12,
+          background: toast.type==='ok' ? '#1E293B' : '#EF4444',
+          color:'#FFF',fontWeight:700,fontSize:'0.83rem',boxShadow:'0 8px 30px rgba(0,0,0,0.2)',
+          fontFamily:"'Cairo',sans-serif",animation:'slideUp .3s ease'}}>
+          {toast.msg}
         </div>
       )}
     </div>
