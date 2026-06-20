@@ -1,0 +1,7 @@
+{
+  "name": "golden-horizon",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd .. && bun install && bun run build && mkdir -p golden-horizon/dist && cp -r dist/. golden-horizon/dist/"
+  }
+}
