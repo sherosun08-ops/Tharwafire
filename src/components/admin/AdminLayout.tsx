@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bell, LogOut, Settings, Menu, X, Search, ChevronRight, TrendingUp, Users, FileText, MessageSquare, BarChart2, Shield, Home, Briefcase, CreditCard, Bell as BellIcon, UserCheck, Lock, Layout, HelpCircle, Star, Palette, Info, Globe, Ticket, UserCog } from 'lucide-react'
+import { Bell, LogOut, Settings, Menu, X, Search, ChevronRight, TrendingUp, Users, FileText, MessageSquare, BarChart2, Shield, Home, Briefcase, CreditCard, Bell as BellIcon, UserCheck, Lock, Layout, HelpCircle, Star, Palette, Info, Globe, Ticket, UserCog, ShieldCheck } from 'lucide-react'
 import Overview from './pages/Overview'
 import Clients from './pages/Clients'
 import Portfolios from './pages/Portfolios'
@@ -19,16 +19,16 @@ import TestimonialsManager from './pages/TestimonialsManager'
 import SiteDesign from './pages/SiteDesign'
 import AboutManager from './pages/AboutManager'
 import SubAdmins from './pages/SubAdmins'
+import PrivacyPolicyManager from './pages/PrivacyPolicyManager'
 import { mockNotifications } from './adminData'
 
-type Page = 'overview'|'clients'|'portfolios'|'transactions'|'messages'|'content'|'reports'|'team'|'notifications'|'settings'|'security'|'hero'|'services_mgr'|'markets_mgr'|'faq_mgr'|'testimonials'|'site_design'|'about_mgr'|'sub_admins'
+type Page = 'overview'|'clients'|'portfolios'|'transactions'|'messages'|'content'|'reports'|'team'|'notifications'|'settings'|'security'|'hero'|'services_mgr'|'markets_mgr'|'faq_mgr'|'testimonials'|'site_design'|'about_mgr'|'sub_admins'|'privacy_policy'
 
 interface Props {
   onLogout: () => void
   role: 'super' | 'sub'
 }
 
-// Pages sub-admins are allowed to access
 const SUB_ADMIN_ALLOWED: Page[] = ['clients', 'portfolios', 'transactions']
 
 const superNavGroups = [
@@ -54,6 +54,7 @@ const superNavGroups = [
     { key: 'testimonials', Icon: Star, label: 'الشهادات' },
     { key: 'about_mgr', Icon: Info, label: 'من نحن' },
     { key: 'site_design', Icon: Palette, label: 'التصميم والتنقل' },
+    { key: 'privacy_policy', Icon: ShieldCheck, label: 'سياسة الخصوصية' },
   ]},
   { title: 'النظام', items: [
     { key: 'notifications', Icon: BellIcon, label: 'الإشعارات', badge: mockNotifications.filter(n=>!n.read).length },
@@ -81,7 +82,7 @@ const pageTitles: Record<Page,string> = {
   hero:'قسم البطل',services_mgr:'إدارة الخدمات',markets_mgr:'إدارة الأسواق',
   faq_mgr:'الأسئلة الشائعة',testimonials:'الشهادات',
   site_design:'التصميم والتنقل',about_mgr:'صفحة من نحن',
-  sub_admins:'إدارة المشرفين',
+  sub_admins:'إدارة المشرفين', privacy_policy:'سياسة الخصوصية',
 }
 
 export default function AdminLayout({ onLogout, role }: Props) {
@@ -101,7 +102,6 @@ export default function AdminLayout({ onLogout, role }: Props) {
     : (localStorage.getItem('admin_name') || 'مشرف')
   const adminEmail = localStorage.getItem('admin_email') || ''
 
-  // Guard: if sub-admin tries to navigate to a non-allowed page, redirect
   const safePage: Page = (!isSuper && !SUB_ADMIN_ALLOWED.includes(page)) ? 'clients' : page
 
   const renderPage = () => {
@@ -125,6 +125,7 @@ export default function AdminLayout({ onLogout, role }: Props) {
       case 'site_design': return <SiteDesign />
       case 'about_mgr': return <AboutManager />
       case 'sub_admins': return isSuper ? <SubAdmins /> : <Clients />
+      case 'privacy_policy': return isSuper ? <PrivacyPolicyManager /> : <Clients />
       default: return isSuper ? <Overview /> : <Clients />
     }
   }
@@ -190,7 +191,7 @@ export default function AdminLayout({ onLogout, role }: Props) {
               {group.items.map(item => {
                 const isActive = safePage === item.key
                 const { Icon } = item
-                const isSubAdminsItem = item.key === 'sub_admins'
+                const isSpecial = item.key === 'sub_admins' || item.key === 'privacy_policy'
                 return (
                   <button key={item.key}
                     onClick={()=>handleNavClick(item.key)}
@@ -198,18 +199,18 @@ export default function AdminLayout({ onLogout, role }: Props) {
                     style={{
                       width:'100%', display:'flex', alignItems:'center', gap:9,
                       padding: collapsed ? '9px 0' : '9px 14px',
-                      background: isActive ? 'rgba(14,165,233,0.1)' : (isSubAdminsItem && !isActive ? 'rgba(201,168,76,0.05)' : 'transparent'),
+                      background: isActive ? 'rgba(14,165,233,0.1)' : (isSpecial && !isActive ? 'rgba(201,168,76,0.05)' : 'transparent'),
                       border:'none',
-                      borderRight: isActive ? '2px solid #C9A84C' : (isSubAdminsItem ? '2px solid rgba(201,168,76,0.3)' : '2px solid transparent'),
+                      borderRight: isActive ? '2px solid #C9A84C' : (isSpecial ? '2px solid rgba(201,168,76,0.3)' : '2px solid transparent'),
                       borderLeft:'none', cursor:'pointer',
-                      color: isActive ? '#0EA5E9' : (isSubAdminsItem ? '#C9A84C' : '#475569'),
-                      fontSize:'0.82rem', fontWeight: isActive ? 700 : (isSubAdminsItem ? 600 : 400),
+                      color: isActive ? '#0EA5E9' : (isSpecial ? '#C9A84C' : '#475569'),
+                      fontSize:'0.82rem', fontWeight: isActive ? 700 : (isSpecial ? 600 : 400),
                       fontFamily:"'Cairo',sans-serif", transition:'all 0.15s',
                       textAlign:'right', justifyContent: collapsed ? 'center' : 'flex-start',
                       position:'relative',
                     }}
                     onMouseEnter={e=>{if(!isActive){e.currentTarget.style.color='#0EA5E9';e.currentTarget.style.background='rgba(14,165,233,0.05)'}}}
-                    onMouseLeave={e=>{if(!isActive){e.currentTarget.style.color=isSubAdminsItem?'#C9A84C':'#475569';e.currentTarget.style.background=isSubAdminsItem?'rgba(201,168,76,0.05)':'transparent'}}}>
+                    onMouseLeave={e=>{if(!isActive){e.currentTarget.style.color=isSpecial?'#C9A84C':'#475569';e.currentTarget.style.background=isSpecial?'rgba(201,168,76,0.05)':'transparent'}}}>
                     <Icon size={16} style={{ flexShrink:0 }} />
                     {!collapsed && <>
                       <span style={{ flex:1, whiteSpace:'nowrap' }}>{item.label}</span>
