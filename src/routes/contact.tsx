@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle } from "lucide-react";
 import { useLang } from "../contexts/LanguageContext";
+import { addContactMessage } from "../lib/store";
 
 export const Route = createFileRoute("/contact")({ component: Contact });
 
@@ -39,7 +40,18 @@ function Contact() {
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 1200));
+
+    // Save message to admin panel
+    addContactMessage({
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      service: form.service,
+      message: form.message,
+      source: 'contact',
+    });
+
     setLoading(false);
     setSubmitted(true);
   };
