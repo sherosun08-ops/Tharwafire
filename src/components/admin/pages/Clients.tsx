@@ -101,10 +101,12 @@ export default function Clients() {
   // Create Account form state
   const [form, setForm] = useState({
     clientId: '',
+    customClientName: '',
     email: '',
     password: generatePassword(),
     sendEmail: true,
     status: 'active',
+    customStatus: '',
     note: '',
   })
   const [formSaved, setFormSaved] = useState(false)
@@ -473,13 +475,43 @@ export default function Clients() {
               <form onSubmit={handleSaveAccount} style={{display:'flex',flexDirection:'column',gap:18}}>
                 <div>
                   <label style={C.label}>العميل المرتبط *</label>
-                  <select value={form.clientId} onChange={e=>setForm(f=>({...f,clientId:e.target.value}))}
-                    style={{...C.input,cursor:'pointer'}} required>
+                  <select
+                    value={form.clientId}
+                    onChange={e => {
+                      const val = e.target.value
+                      setForm(f => ({
+                        ...f,
+                        clientId: val,
+                        customClientName: val !== 'custom' ? '' : f.customClientName,
+                        email: val !== 'custom' && val !== ''
+                          ? clients.find(c => c.id.toString() === val)?.email.replace('@email.com','@tharwah.com') || f.email
+                          : f.email,
+                      }))
+                    }}
+                    style={{...C.input,cursor:'pointer'}}
+                    required={form.clientId !== 'custom'}
+                  >
                     <option value="">-- اختر العميل --</option>
-                    {mockClients.map(c=>(
+                    {clients.map(c=>(
                       <option key={c.id} value={c.id}>{c.name} — {c.email}</option>
                     ))}
+                    <option value="custom">✏️ إنشاء عميل جديد / إدخال اسم مخصص</option>
                   </select>
+                  {form.clientId === 'custom' && (
+                    <div style={{marginTop:8}}>
+                      <input
+                        value={form.customClientName}
+                        onChange={e=>setForm(f=>({...f,customClientName:e.target.value}))}
+                        placeholder="اكتب اسم العميل الجديد..."
+                        style={{...C.input,borderColor:'#C9A84C',background:'rgba(201,168,76,0.05)'}}
+                        required
+                        autoFocus
+                      />
+                      <div style={{fontSize:'0.68rem',color:'#C9A84C',marginTop:4}}>
+                        ✏️ أدخل اسم العميل الجديد يدوياً
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={C.label}>البريد الإلكتروني لتسجيل الدخول *</label>
@@ -505,11 +537,31 @@ export default function Clients() {
                 </div>
                 <div>
                   <label style={C.label}>حالة الحساب</label>
-                  <select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))} style={{...C.input,cursor:'pointer'}}>
+                  <select
+                    value={form.status}
+                    onChange={e => {
+                      const val = e.target.value
+                      setForm(f => ({...f, status: val, customStatus: val !== 'custom' ? '' : f.customStatus}))
+                    }}
+                    style={{...C.input,cursor:'pointer'}}
+                  >
                     <option value="active">نشط — يستطيع الدخول فوراً</option>
                     <option value="pending">معلق — بانتظار التفعيل</option>
                     <option value="suspended">موقوف مؤقتاً</option>
+                    <option value="custom">✏️ حالة مخصصة</option>
                   </select>
+                  {form.status === 'custom' && (
+                    <div style={{marginTop:8}}>
+                      <input
+                        value={form.customStatus}
+                        onChange={e=>setForm(f=>({...f,customStatus:e.target.value}))}
+                        placeholder="اكتب الحالة المخصصة..."
+                        style={{...C.input,borderColor:'#8B5CF6',background:'rgba(139,92,246,0.05)'}}
+                        autoFocus
+                      />
+                      <div style={{fontSize:'0.68rem',color:'#8B5CF6',marginTop:4}}>✏️ أدخل الحالة يدوياً</div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={{...C.label,display:'flex',alignItems:'center',gap:8,cursor:'pointer'}}>
@@ -554,7 +606,11 @@ export default function Clients() {
                   </div>
                   <div style={{fontSize:'0.75rem',opacity:0.6,marginBottom:4}}>الاسم</div>
                   <div style={{fontSize:'1rem',fontWeight:700,marginBottom:12}}>
-                    {form.clientId ? mockClients.find(c=>c.id.toString()===form.clientId)?.name||'—' : 'اختر العميل'}
+                    {form.clientId === 'custom'
+                      ? (form.customClientName || 'عميل جديد...')
+                      : form.clientId
+                        ? clients.find(c=>c.id.toString()===form.clientId)?.name||'—'
+                        : 'اختر العميل'}
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                     <div>
