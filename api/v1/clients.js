@@ -1,88 +1,90 @@
-import { supabase } from '../_lib/supabase.js'
+import { query, queryOne } from '../_lib/db.js'
 import { handleCors } from '../_lib/cors.js'
 import { requireAdmin } from '../_lib/auth.js'
 import bcrypt from 'bcryptjs'
 
 export default async function handler(req, res) {
   if (handleCors(req, res)) return
+  const decoded = requireAdmin(req, res)
+  if (!decoded) return
 
-  const admin = requireAdmin(req, res)
-  if (!admin) return
+  try {
+    // GET — list or single client
+    if (req.method === 'GET') {
+      const { id, search, status, limit = 50, offset = 0 } = req.query
+      if (id) {
+        const client = await queryOne(
+          `SELECT id, name, email, phone, status, account_number, join_date,
+                  risk_profile, avatar_url, notes, created_at
+           FROM clients WHERE id = $1`, [id]
+        )
+        if (!client) return res.status(404).json({ error: 'العميل غير موجود' })
+        return res.json({ client })
+      }
 
-  const { method, query, body } = req
+      let sql = `SELECT id, name, email, phone, status, account_number, join_date,
+                        risk_profile, avatar_url, notes, created_at
+                 FROM clients WHERE 1=1`
+      const params = []
+      if (status) { params.push(status); sql += ` AND status = $${params.length}` }
+      if (search) { params.push(`%${search}%`); sql += ` AND (name ILIKE $${params.length} OR email ILIKE $${params.length} OR phone ILIKE $${params.length})` }
+      sql += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`
+      params.push(Number(limit), Number(offset))
+      const clients = await query(sql, params)
+      const [{ count }] = await query('SELECT COUNT(*) FROM clients', [])
+      return res.json({ clients, total: Number(count) })
+    }
 
-  // GET /api/v1/clients — list all clients
-  if (method === 'GET' && !query.id) {
-    const { data, error } = await supabase
-      .from('clients')
-      .select('id, name, email, phone, nationality, id_number, category, status, portfolio_code, risk_profile, investment_goal, kyc_status, notes, initial, created_at')
-      .order('created_at', { ascending: false })
+    // POST — create client
+    if (req.method === 'POST') {
+      const { name, email, phone, password, risk_profile, notes } = req.body || {}
+      if (!name || !email || !password) return res.status(400).json({ error: 'الاسم والبريد والكلمة مطلوبة' })
+      const existing = await queryOne('SELECT id FROM clients WHERE email = $1', [email.toLowerCase()])
+      if (existing) return res.status(409).json({ error: 'البريد الإلكتروني مستخدم' })
+      const hash = await bcrypt.hash(password, 10)
+      const acc = 'TH' + Date.now().toString().slice(-8)
+      const client = await queryOne(
+        `INSERT INTO clients (name, email, phone, password_hash, account_number, risk_profile, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, name, email, phone, status, account_number, join_date, risk_profile, notes`,
+        [name, email.toLowerCase(), phone || null, hash, acc, risk_profile || 'moderate', notes || null]
+      )
+      return res.status(201).json({ client })
+    }
 
-    if (error) return res.status(500).json({ error: error.message })
-    return res.json({ clients: data })
+    // PATCH — update client
+    if (req.method === 'PATCH') {
+      const { id, name, email, phone, status, risk_profile, notes, password } = req.body || {}
+      if (!id) return res.status(400).json({ error: 'id مطلوب' })
+      const sets = []; const params = []
+      if (name)        { params.push(name);                   sets.push(`name = $${params.length}`) }
+      if (email)       { params.push(email.toLowerCase());    sets.push(`email = $${params.length}`) }
+      if (phone)       { params.push(phone);                  sets.push(`phone = $${params.length}`) }
+      if (status)      { params.push(status);                 sets.push(`status = $${params.length}`) }
+      if (risk_profile){ params.push(risk_profile);           sets.push(`risk_profile = $${params.length}`) }
+      if (notes !== undefined){ params.push(notes);           sets.push(`notes = $${params.length}`) }
+      if (password)    { params.push(await bcrypt.hash(password, 10)); sets.push(`password_hash = $${params.length}`) }
+      if (!sets.length) return res.status(400).json({ error: 'لا توجد حقول للتحديث' })
+      params.push(id)
+      const client = await queryOne(
+        `UPDATE clients SET ${sets.join(', ')}, updated_at = NOW() WHERE id = $${params.length}
+         RETURNING id, name, email, phone, status, account_number, risk_profile, notes`,
+        params
+      )
+      if (!client) return res.status(404).json({ error: 'العميل غير موجود' })
+      return res.json({ client })
+    }
+
+    // DELETE
+    if (req.method === 'DELETE') {
+      const { id } = req.query
+      if (!id) return res.status(400).json({ error: 'id مطلوب' })
+      await query('DELETE FROM clients WHERE id = $1', [id])
+      return res.json({ success: true })
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
+  } catch (e) {
+    return res.status(500).json({ error: e.message })
   }
-
-  // GET /api/v1/clients?id=xxx — single client
-  if (method === 'GET' && query.id) {
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('id', query.id)
-      .single()
-
-    if (error || !data) return res.status(404).json({ error: 'Client not found' })
-    return res.json({ client: data })
-  }
-
-  // POST /api/v1/clients — create client
-  if (method === 'POST') {
-    const { name, email, phone, nationality, id_number, category, password, risk_profile, investment_goal, notes } = body || {}
-    if (!name || !email) return res.status(400).json({ error: 'الاسم والبريد الإلكتروني مطلوبان' })
-
-    const password_hash = password ? await bcrypt.hash(password, 10) : null
-
-    // Generate portfolio code
-    const { count } = await supabase.from('clients').select('*', { count: 'exact', head: true })
-    const code = `PF-${String((count || 0) + 1).padStart(3, '0')}`
-    const initial = name.charAt(0)
-
-    const { data, error } = await supabase
-      .from('clients')
-      .insert({ name, email: email.toLowerCase(), phone, nationality, id_number, category: category || 'standard', password_hash, portfolio_code: code, risk_profile, investment_goal, notes, initial, kyc_status: 'pending', status: 'pending' })
-      .select()
-      .single()
-
-    if (error) return res.status(400).json({ error: error.message })
-
-    await supabase.from('audit_logs').insert({ actor_id: admin.id, actor_type: 'admin', actor_email: admin.email, action: 'create_client', target_table: 'clients', target_id: data.id })
-    return res.status(201).json({ client: data })
-  }
-
-  // PATCH /api/v1/clients?id=xxx — update client
-  if (method === 'PATCH' && query.id) {
-    const { password, ...rest } = body || {}
-    const updates = { ...rest, updated_at: new Date().toISOString() }
-    if (password) updates.password_hash = await bcrypt.hash(password, 10)
-
-    const { data, error } = await supabase
-      .from('clients')
-      .update(updates)
-      .eq('id', query.id)
-      .select()
-      .single()
-
-    if (error) return res.status(400).json({ error: error.message })
-    await supabase.from('audit_logs').insert({ actor_id: admin.id, actor_type: 'admin', actor_email: admin.email, action: 'update_client', target_table: 'clients', target_id: query.id, details: rest })
-    return res.json({ client: data })
-  }
-
-  // DELETE /api/v1/clients?id=xxx
-  if (method === 'DELETE' && query.id) {
-    const { error } = await supabase.from('clients').delete().eq('id', query.id)
-    if (error) return res.status(400).json({ error: error.message })
-    await supabase.from('audit_logs').insert({ actor_id: admin.id, actor_type: 'admin', actor_email: admin.email, action: 'delete_client', target_table: 'clients', target_id: query.id })
-    return res.json({ success: true })
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' })
 }

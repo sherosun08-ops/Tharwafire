@@ -1,75 +1,70 @@
-import { supabase } from '../_lib/supabase.js'
+import { query, queryOne } from '../_lib/db.js'
 import { handleCors } from '../_lib/cors.js'
 import { requireAdmin } from '../_lib/auth.js'
 
 export default async function handler(req, res) {
   if (handleCors(req, res)) return
+  const decoded = requireAdmin(req, res)
+  if (!decoded) return
 
-  const admin = requireAdmin(req, res)
-  if (!admin) return
-
-  const { method, query, body } = req
-
-  if (method === 'GET') {
-    if (query.client_id) {
-      const { data, error } = await supabase
-        .from('portfolios')
-        .select('*')
-        .eq('client_id', query.client_id)
-        .order('created_at', { ascending: false })
-      if (error) return res.status(500).json({ error: error.message })
-      return res.json({ portfolios: data })
+  try {
+    if (req.method === 'GET') {
+      const { client_id, id } = req.query
+      if (id) {
+        const p = await queryOne('SELECT * FROM portfolios WHERE id = $1', [id])
+        if (!p) return res.status(404).json({ error: 'المحفظة غير موجودة' })
+        return res.json({ portfolio: p })
+      }
+      const params = client_id ? [client_id] : []
+      const portfolios = await query(
+        `SELECT p.*, c.name AS client_name FROM portfolios p
+         LEFT JOIN clients c ON c.id = p.client_id
+         ${client_id ? 'WHERE p.client_id = $1' : ''}
+         ORDER BY p.created_at DESC`,
+        params
+      )
+      return res.json({ portfolios })
     }
 
-    const { data, error } = await supabase
-      .from('portfolios')
-      .select('*, clients(name, email, portfolio_code)')
-      .order('created_at', { ascending: false })
-    if (error) return res.status(500).json({ error: error.message })
-    return res.json({ portfolios: data })
-  }
-
-  if (method === 'POST') {
-    const { client_id, name, type, total_value, initial_investment, currency, assets, notes } = body || {}
-    if (!client_id || !name) return res.status(400).json({ error: 'معرف العميل والاسم مطلوبان' })
-
-    const profit_loss = (total_value || 0) - (initial_investment || 0)
-    const profit_loss_pct = initial_investment ? (profit_loss / initial_investment) * 100 : 0
-
-    const { data, error } = await supabase
-      .from('portfolios')
-      .insert({ client_id, name, type, total_value: total_value || 0, initial_investment: initial_investment || 0, profit_loss, profit_loss_pct, currency: currency || 'USD', assets: assets || [], notes })
-      .select()
-      .single()
-
-    if (error) return res.status(400).json({ error: error.message })
-    await supabase.from('audit_logs').insert({ actor_id: admin.id, actor_type: 'admin', actor_email: admin.email, action: 'create_portfolio', target_table: 'portfolios', target_id: data.id })
-    return res.status(201).json({ portfolio: data })
-  }
-
-  if (method === 'PATCH' && query.id) {
-    const updates = { ...body, updated_at: new Date().toISOString() }
-    if (updates.total_value !== undefined && updates.initial_investment !== undefined) {
-      updates.profit_loss = updates.total_value - updates.initial_investment
-      updates.profit_loss_pct = updates.initial_investment ? (updates.profit_loss / updates.initial_investment) * 100 : 0
+    if (req.method === 'POST') {
+      const { client_id, name, type, initial_value, currency = 'SAR', notes } = req.body || {}
+      if (!client_id || !name || !initial_value) return res.status(400).json({ error: 'الحقول الأساسية مطلوبة' })
+      const p = await queryOne(
+        `INSERT INTO portfolios (client_id, name, type, initial_value, current_value, currency, notes)
+         VALUES ($1, $2, $3, $4, $4, $5, $6) RETURNING *`,
+        [client_id, name, type || 'mixed', initial_value, currency, notes || null]
+      )
+      return res.status(201).json({ portfolio: p })
     }
 
-    const { data, error } = await supabase
-      .from('portfolios')
-      .update(updates)
-      .eq('id', query.id)
-      .select()
-      .single()
+    if (req.method === 'PATCH') {
+      const { id, name, type, current_value, status, notes } = req.body || {}
+      if (!id) return res.status(400).json({ error: 'id مطلوب' })
+      const sets = []; const params = []
+      if (name)    { params.push(name);          sets.push(`name = $${params.length}`) }
+      if (type)    { params.push(type);          sets.push(`type = $${params.length}`) }
+      if (current_value !== undefined){ params.push(current_value); sets.push(`current_value = $${params.length}`) }
+      if (status)  { params.push(status);        sets.push(`status = $${params.length}`) }
+      if (notes !== undefined){ params.push(notes); sets.push(`notes = $${params.length}`) }
+      if (!sets.length) return res.status(400).json({ error: 'لا توجد حقول' })
+      params.push(id)
+      const p = await queryOne(
+        `UPDATE portfolios SET ${sets.join(', ')}, updated_at = NOW() WHERE id = $${params.length} RETURNING *`,
+        params
+      )
+      if (!p) return res.status(404).json({ error: 'المحفظة غير موجودة' })
+      return res.json({ portfolio: p })
+    }
 
-    if (error) return res.status(400).json({ error: error.message })
-    return res.json({ portfolio: data })
+    if (req.method === 'DELETE') {
+      const { id } = req.query
+      if (!id) return res.status(400).json({ error: 'id مطلوب' })
+      await query('DELETE FROM portfolios WHERE id = $1', [id])
+      return res.json({ success: true })
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
+  } catch (e) {
+    return res.status(500).json({ error: e.message })
   }
-
-  if (method === 'DELETE' && query.id) {
-    const { error } = await supabase.from('portfolios').delete().eq('id', query.id)
-    if (error) return res.status(400).json({ error: error.message })
-    return res.json({ success: true })
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' })
 }

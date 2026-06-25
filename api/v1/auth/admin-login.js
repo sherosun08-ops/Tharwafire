@@ -1,6 +1,6 @@
-import { supabase } from '../../_lib/supabase.js'
-import { signToken } from '../../_lib/auth.js'
-import { handleCors } from '../../_lib/cors.js'
+import { queryOne, query } from '../../../_lib/db.js'
+import { signToken } from '../../../_lib/auth.js'
+import { handleCors } from '../../../_lib/cors.js'
 import bcrypt from 'bcryptjs'
 
 export default async function handler(req, res) {
@@ -12,52 +12,40 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'البريد الإلكتروني وكلمة المرور مطلوبان' })
   }
 
-  // Check admins table first
-  const { data: admin, error } = await supabase
-    .from('admins')
-    .select('id, name, email, password_hash, role, status')
-    .eq('email', email.toLowerCase().trim())
-    .single()
+  try {
+    // Check admins table
+    let admin = await queryOne(
+      'SELECT id, name, email, password_hash, role, status FROM admins WHERE email = $1',
+      [email.toLowerCase().trim()]
+    )
 
-  if (error || !admin) {
-    // Check sub_admins table
-    const { data: sub } = await supabase
-      .from('sub_admins')
-      .select('id, name, email, password_hash, status')
-      .eq('email', email.toLowerCase().trim())
-      .single()
-
-    if (!sub) {
-      return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' })
+    if (!admin) {
+      // Check sub_admins
+      const sub = await queryOne(
+        'SELECT id, name, email, password_hash, status FROM sub_admins WHERE email = $1',
+        [email.toLowerCase().trim()]
+      )
+      if (!sub) return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' })
+      if (sub.status !== 'active') return res.status(403).json({ error: 'الحساب موقوف' })
+      const valid = await bcrypt.compare(password, sub.password_hash)
+      if (!valid) return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' })
+      const token = signToken({ id: sub.id, email: sub.email, name: sub.name, role: 'sub' })
+      return res.json({ token, admin: { id: sub.id, name: sub.name, email: sub.email, role: 'sub' } })
     }
 
-    if (sub.status !== 'active') {
-      return res.status(403).json({ error: 'الحساب موقوف. تواصل مع المدير.' })
-    }
-
-    const valid = await bcrypt.compare(password, sub.password_hash)
+    if (admin.status !== 'active') return res.status(403).json({ error: 'الحساب موقوف' })
+    const valid = await bcrypt.compare(password, admin.password_hash)
     if (!valid) return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' })
 
-    const token = signToken({ id: sub.id, email: sub.email, name: sub.name, role: 'sub' })
-    return res.json({ token, user: { id: sub.id, name: sub.name, email: sub.email, role: 'sub' } })
+    await query(
+      `INSERT INTO audit_logs (actor_id, actor_type, actor_email, action, details)
+       VALUES ($1, 'admin', $2, 'admin_login', $3)`,
+      [admin.id, admin.email, JSON.stringify({ ip: req.headers['x-forwarded-for'] || 'unknown' })]
+    )
+
+    const token = signToken({ id: admin.id, email: admin.email, name: admin.name, role: admin.role })
+    return res.json({ token, admin: { id: admin.id, name: admin.name, email: admin.email, role: admin.role } })
+  } catch (e) {
+    return res.status(500).json({ error: e.message })
   }
-
-  if (admin.status !== 'active') {
-    return res.status(403).json({ error: 'الحساب موقوف. تواصل مع المدير.' })
-  }
-
-  const valid = await bcrypt.compare(password, admin.password_hash)
-  if (!valid) return res.status(401).json({ error: 'بيانات الدخول غير صحيحة' })
-
-  // Audit log
-  await supabase.from('audit_logs').insert({
-    actor_id: admin.id,
-    actor_type: 'admin',
-    actor_email: admin.email,
-    action: 'admin_login',
-    details: { ip: req.headers['x-forwarded-for'] || 'unknown' },
-  })
-
-  const token = signToken({ id: admin.id, email: admin.email, name: admin.name, role: admin.role })
-  return res.json({ token, user: { id: admin.id, name: admin.name, email: admin.email, role: admin.role } })
 }
