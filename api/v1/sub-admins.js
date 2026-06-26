@@ -1,63 +1,43 @@
-import { query, queryOne } from '../_lib/db.js'
+import { supabase } from '../_lib/supabase.js'
 import { handleCors } from '../_lib/cors.js'
 import { requireAdmin } from '../_lib/auth.js'
-import logger from '../_lib/logger.js'
-import { sendError, sendSuccess, ValidationError, AuthorizationError } from '../_lib/errors.js'
 import bcrypt from 'bcryptjs'
 
 export default async function handler(req, res) {
   if (handleCors(req, res)) return
   const decoded = requireAdmin(req, res)
   if (!decoded) return
-  if (decoded.role !== 'super') {
-    logger.warn('Unauthorized access to sub-admins endpoint', { adminId: decoded.id, role: decoded.role })
-    return sendError(res, new AuthorizationError('صلاحيات المدير الرئيسي مطلوبة'))
-  }
+  if (decoded.role !== 'super') return res.status(403).json({ error: 'صلاحيات المدير الرئيسي مطلوبة' })
 
   try {
     if (req.method === 'GET') {
-      const subs = await query(
-        'SELECT id, name, email, status, created_at FROM sub_admins ORDER BY created_at DESC', []
-      )
-      logger.info('Sub-admins listed', { count: subs.length })
-      return sendSuccess(res, { subAdmins: subs })
+      const { data, error } = await supabase.from('sub_admins').select('id, name, email, status, created_at').order('created_at', { ascending: false })
+      if (error) return res.status(500).json({ error: error.message })
+      return res.json({ subAdmins: data })
     }
 
     if (req.method === 'POST') {
       const { name, email, password } = req.body || {}
-      if (!name || !email || !password) {
-        return sendError(res, new ValidationError('جميع الحقول مطلوبة: name, email, password'))
-      }
-      if (password.length < 6) {
-        return sendError(res, new ValidationError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'))
-      }
-      const existing = await queryOne('SELECT id FROM sub_admins WHERE email = $1', [email.toLowerCase()])
-      if (existing) {
-        logger.warn('Duplicate email for sub-admin', { email })
-        return sendError(res, new ValidationError('البريد الإلكتروني مستخدم'))
-      }
+      if (!name || !email || !password) return res.status(400).json({ error: 'جميع الحقول مطلوبة' })
+      if (password.length < 6) return res.status(400).json({ error: 'كلمة المرور 6 أحرف على الأقل' })
+      const { data: existing } = await supabase.from('sub_admins').select('id').eq('email', email.toLowerCase()).single()
+      if (existing) return res.status(409).json({ error: 'البريد الإلكتروني مستخدم' })
       const hash = await bcrypt.hash(password, 10)
-      const sub = await queryOne(
-        `INSERT INTO sub_admins (name, email, password_hash)
-         VALUES ($1, $2, $3) RETURNING id, name, email, status, created_at`,
-        [name.trim(), email.toLowerCase().trim(), hash]
-      )
-      logger.info('Sub-admin created', { subAdminId: sub.id, email })
-      return sendSuccess(res, { subAdmin: sub }, 201)
+      const { data, error } = await supabase.from('sub_admins').insert({ name: name.trim(), email: email.toLowerCase().trim(), password_hash: hash }).select('id, name, email, status, created_at').single()
+      if (error) return res.status(500).json({ error: error.message })
+      return res.status(201).json({ subAdmin: data })
     }
 
     if (req.method === 'DELETE') {
       const { id } = req.query
-      if (!id) {
-        return sendError(res, new ValidationError('معرف المدير المساعد مطلوب'))
-      }
-      await query('DELETE FROM sub_admins WHERE id = $1', [id])
-      logger.info('Sub-admin deleted', { subAdminId: id })
-      return sendSuccess(res, { success: true })
+      if (!id) return res.status(400).json({ error: 'id مطلوب' })
+      const { error } = await supabase.from('sub_admins').delete().eq('id', id)
+      if (error) return res.status(500).json({ error: error.message })
+      return res.json({ success: true })
     }
 
-    return sendError(res, new ValidationError('Method not allowed'))
+    return res.status(405).json({ error: 'Method not allowed' })
   } catch (e) {
-    return sendError(res, e, { endpoint: 'sub-admins' })
+    return res.status(500).json({ error: e.message })
   }
 }

@@ -1,8 +1,6 @@
-import { query, queryOne } from '../_lib/db.js'
+import { supabase } from '../_lib/supabase.js'
 import { handleCors } from '../_lib/cors.js'
 import { requireAdmin } from '../_lib/auth.js'
-import logger from '../_lib/logger.js'
-import { sendError, sendSuccess, ValidationError, NotFoundError } from '../_lib/errors.js'
 
 export default async function handler(req, res) {
   if (handleCors(req, res)) return
@@ -13,79 +11,43 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { client_id, id } = req.query
       if (id) {
-        const p = await queryOne('SELECT * FROM portfolios WHERE id = $1', [id])
-        if (!p) {
-          logger.warn('Portfolio not found', { portfolioId: id })
-          return sendError(res, new NotFoundError('المحفظة'))
-        }
-        logger.debug('Portfolio retrieved', { portfolioId: id })
-        return sendSuccess(res, { portfolio: p })
+        const { data, error } = await supabase.from('portfolios').select('*').eq('id', id).single()
+        if (error || !data) return res.status(404).json({ error: 'المحفظة غير موجودة' })
+        return res.json({ portfolio: data })
       }
-      const params = client_id ? [client_id] : []
-      const portfolios = await query(
-        `SELECT p.*, c.name AS client_name FROM portfolios p
-         LEFT JOIN clients c ON c.id = p.client_id
-         ${client_id ? 'WHERE p.client_id = $1' : ''}
-         ORDER BY p.created_at DESC`,
-        params
-      )
-      logger.info('Portfolios listed', { count: portfolios.length, clientId: client_id })
-      return sendSuccess(res, { portfolios })
+      let q = supabase.from('portfolios').select('*, clients(name)')
+      if (client_id) q = q.eq('client_id', client_id)
+      const { data, error } = await q.order('created_at', { ascending: false })
+      if (error) return res.status(500).json({ error: error.message })
+      return res.json({ portfolios: data })
     }
 
     if (req.method === 'POST') {
       const { client_id, name, type, initial_value, currency = 'SAR', notes } = req.body || {}
-      if (!client_id || !name || !initial_value) {
-        return sendError(res, new ValidationError('الحقول الأساسية مطلوبة: client_id, name, initial_value'))
-      }
-      const p = await queryOne(
-        `INSERT INTO portfolios (client_id, name, type, initial_value, current_value, currency, notes)
-         VALUES ($1, $2, $3, $4, $4, $5, $6) RETURNING *`,
-        [client_id, name, type || 'mixed', initial_value, currency, notes || null]
-      )
-      logger.info('Portfolio created', { portfolioId: p.id, clientId: client_id })
-      return sendSuccess(res, { portfolio: p }, 201)
+      if (!client_id || !name || !initial_value) return res.status(400).json({ error: 'الحقول الأساسية مطلوبة' })
+      const { data, error } = await supabase.from('portfolios').insert({ client_id, name, type: type || 'mixed', initial_value, current_value: initial_value, currency, notes }).select('*').single()
+      if (error) return res.status(500).json({ error: error.message })
+      return res.status(201).json({ portfolio: data })
     }
 
     if (req.method === 'PATCH') {
-      const { id, name, type, current_value, status, notes } = req.body || {}
-      if (!id) {
-        return sendError(res, new ValidationError('معرف المحفظة مطلوب'))
-      }
-      const sets = []; const params = []
-      if (name)    { params.push(name);          sets.push(`name = $${params.length}`) }
-      if (type)    { params.push(type);          sets.push(`type = $${params.length}`) }
-      if (current_value !== undefined){ params.push(current_value); sets.push(`current_value = $${params.length}`) }
-      if (status)  { params.push(status);        sets.push(`status = $${params.length}`) }
-      if (notes !== undefined){ params.push(notes); sets.push(`notes = $${params.length}`) }
-      if (!sets.length) {
-        return sendError(res, new ValidationError('لا توجد حقول للتحديث'))
-      }
-      params.push(id)
-      const p = await queryOne(
-        `UPDATE portfolios SET ${sets.join(', ')}, updated_at = NOW() WHERE id = $${params.length} RETURNING *`,
-        params
-      )
-      if (!p) {
-        logger.warn('Portfolio not found for update', { portfolioId: id })
-        return sendError(res, new NotFoundError('المحفظة'))
-      }
-      logger.info('Portfolio updated', { portfolioId: id })
-      return sendSuccess(res, { portfolio: p })
+      const { id, ...updates } = req.body || {}
+      if (!id) return res.status(400).json({ error: 'id مطلوب' })
+      const { data, error } = await supabase.from('portfolios').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).select('*').single()
+      if (error) return res.status(500).json({ error: error.message })
+      return res.json({ portfolio: data })
     }
 
     if (req.method === 'DELETE') {
       const { id } = req.query
-      if (!id) {
-        return sendError(res, new ValidationError('معرف المحفظة مطلوب'))
-      }
-      await query('DELETE FROM portfolios WHERE id = $1', [id])
-      logger.info('Portfolio deleted', { portfolioId: id })
-      return sendSuccess(res, { success: true })
+      if (!id) return res.status(400).json({ error: 'id مطلوب' })
+      const { error } = await supabase.from('portfolios').delete().eq('id', id)
+      if (error) return res.status(500).json({ error: error.message })
+      return res.json({ success: true })
     }
 
-    return sendError(res, new ValidationError('Method not allowed'))
+    return res.status(405).json({ error: 'Method not allowed' })
   } catch (e) {
-    return sendError(res, e, { endpoint: 'portfolios' })
+    return res.status(500).json({ error: e.message })
   }
 }
