@@ -1,55 +1,38 @@
-import { query } from '../_lib/db.js'
+import { createClient } from '@supabase/supabase-js'
 import { handleCors } from '../_lib/cors.js'
-import logger from '../_lib/logger.js'
-import { sendError, sendSuccess } from '../_lib/errors.js'
 
 export default async function handler(req, res) {
   if (handleCors(req, res)) return
 
+  const url = process.env.SUPABASE_URL || ''
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || ''
+  const jwtOk = !!(process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET)
+
+  let tables = {}
   try {
-    // Check database connectivity
-    const dbHealthStart = Date.now()
-    await query('SELECT 1', [])
-    const dbHealthTime = Date.now() - dbHealthStart
+    const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
 
-    // Check required environment variables
-    const requiredEnvVars = [
-      'DATABASE_URL',
-      'JWT_SECRET',
-      'SUPABASE_URL',
-      'SUPABASE_SERVICE_ROLE_KEY',
-    ]
+    const [admins, clients, settings] = await Promise.all([
+      sb.from('admins').select('*', { count: 'exact', head: true }),
+      sb.from('clients').select('*', { count: 'exact', head: true }),
+      sb.from('site_settings').select('*', { count: 'exact', head: true }),
+    ])
 
-    const missingVars = requiredEnvVars.filter((v) => !process.env[v])
-
-    const health = {
-      status: missingVars.length === 0 ? 'healthy' : 'degraded',
-      timestamp: new Date().toISOString(),
-      checks: {
-        database: {
-          status: 'up',
-          responseTime: `${dbHealthTime}ms`,
-        },
-        environment: {
-          status: missingVars.length === 0 ? 'configured' : 'misconfigured',
-          missingVariables: missingVars,
-        },
-      },
+    tables = {
+      admins:        { count: admins.count,   error: admins.error?.message   || null },
+      clients:       { count: clients.count,  error: clients.error?.message  || null },
+      site_settings: { count: settings.count, error: settings.error?.message || null },
     }
-
-    if (missingVars.length > 0) {
-      logger.warn('Health check: missing environment variables', { missing: missingVars })
-    } else {
-      logger.info('Health check passed')
-    }
-
-    return sendSuccess(res, health)
   } catch (e) {
-    logger.error('Health check failed', e)
-    return sendError(res, {
-      ...e,
-      statusCode: 503,
-      code: 'SERVICE_UNAVAILABLE',
-    })
+    tables = { error: e.message }
   }
+
+  res.json({
+    ok: true,
+    supabaseProject: url ? url.replace('https://', '').split('.')[0] : 'missing',
+    hasServiceKey:   !!key,
+    hasJwtSecret:    jwtOk,
+    tables,
+    nodeVersion:     process.version,
+  })
 }
