@@ -1,9 +1,8 @@
 -- ============================================================
--- Tharwah Capital — PostgreSQL Schema
--- Run this in Supabase SQL Editor (Project → SQL Editor → New query)
+-- Tharwah Capital — PostgreSQL Schema (v2 — updated to match API)
+-- Run this in Supabase SQL Editor: Project → SQL Editor → New query
 -- ============================================================
 
--- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ============================================================
@@ -31,8 +30,10 @@ CREATE TABLE IF NOT EXISTS sub_admins (
   email         TEXT        UNIQUE NOT NULL,
   password_hash TEXT        NOT NULL,
   status        TEXT        DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  permissions   JSONB       DEFAULT '[]',
   created_by    UUID        REFERENCES admins(id) ON DELETE SET NULL,
-  created_at    TIMESTAMPTZ DEFAULT NOW()
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================
@@ -57,6 +58,11 @@ CREATE TABLE IF NOT EXISTS clients (
   password_hash    TEXT,
   notes            TEXT,
   initial          TEXT,
+  account_number   TEXT,
+  membership_level TEXT        DEFAULT 'عادي',
+  join_date        TIMESTAMPTZ DEFAULT NOW(),
+  avatar_url       TEXT,
+  initial_investment TEXT,
   created_at       TIMESTAMPTZ DEFAULT NOW(),
   updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
@@ -71,11 +77,14 @@ CREATE TABLE IF NOT EXISTS portfolios (
   type               TEXT,
   total_value        NUMERIC     DEFAULT 0,
   initial_investment NUMERIC     DEFAULT 0,
+  initial_value      NUMERIC     DEFAULT 0,
+  current_value      NUMERIC     DEFAULT 0,
   profit_loss        NUMERIC     DEFAULT 0,
   profit_loss_pct    NUMERIC     DEFAULT 0,
   currency           TEXT        DEFAULT 'USD',
   status             TEXT        DEFAULT 'active',
   assets             JSONB       DEFAULT '[]',
+  portfolio_data     JSONB       DEFAULT '{}',
   notes              TEXT,
   created_at         TIMESTAMPTZ DEFAULT NOW(),
   updated_at         TIMESTAMPTZ DEFAULT NOW()
@@ -91,10 +100,13 @@ CREATE TABLE IF NOT EXISTS transactions (
   client_name  TEXT,
   type         TEXT        NOT NULL
                CHECK (type IN ('buy', 'sell', 'transfer', 'deposit', 'withdraw')),
-  asset        TEXT        NOT NULL,
+  asset        TEXT,
   quantity     NUMERIC,
   price        NUMERIC,
   total        NUMERIC,
+  amount       NUMERIC,
+  currency     TEXT        DEFAULT 'SAR',
+  reference    TEXT,
   status       TEXT        DEFAULT 'pending'
                CHECK (status IN ('completed', 'pending', 'rejected')),
   notes        TEXT,
@@ -115,7 +127,8 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   source     TEXT        DEFAULT 'contact',
   status     TEXT        DEFAULT 'new'
              CHECK (status IN ('new', 'read', 'replied')),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ
 );
 
 -- ============================================================
@@ -159,7 +172,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   message    TEXT,
   type       TEXT        DEFAULT 'info'
              CHECK (type IN ('info', 'warning', 'error', 'success')),
-  read       BOOLEAN     DEFAULT FALSE,
+  is_read    BOOLEAN     DEFAULT FALSE,
   target     TEXT        DEFAULT 'admin',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -209,22 +222,19 @@ ALTER TABLE articles         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs       ENABLE ROW LEVEL SECURITY;
 
--- Service role bypasses RLS (used in Vercel serverless functions)
--- Anon can only read public settings and published articles
+-- Service role bypasses RLS
+CREATE POLICY IF NOT EXISTS "service_role_all_admins"      ON admins           FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "service_role_all_sub"         ON sub_admins       FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "service_role_all_clients"     ON clients          FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "service_role_all_portfolios"  ON portfolios       FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "service_role_all_tx"          ON transactions     FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "service_role_all_messages"    ON contact_messages FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "service_role_all_settings"    ON site_settings    FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "service_role_all_articles"    ON articles         FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "service_role_all_notifs"      ON notifications    FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "service_role_all_audit"       ON audit_logs       FOR ALL TO service_role USING (true) WITH CHECK (true);
 
-CREATE POLICY "service_role_all_admins"    ON admins           FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "service_role_all_sub"       ON sub_admins       FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "service_role_all_clients"   ON clients          FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "service_role_all_portfolios" ON portfolios      FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "service_role_all_tx"        ON transactions     FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "service_role_all_messages"  ON contact_messages FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "service_role_all_settings"  ON site_settings    FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "service_role_all_articles"  ON articles         FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "service_role_all_notifs"    ON notifications    FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "service_role_all_audit"     ON audit_logs       FOR ALL TO service_role USING (true) WITH CHECK (true);
-
--- Public read for site settings (anon frontend reads these)
-CREATE POLICY "anon_read_settings"  ON site_settings    FOR SELECT TO anon USING (true);
-CREATE POLICY "anon_read_articles"  ON articles         FOR SELECT TO anon USING (status = 'published');
--- Allow anon to insert contact messages (contact form)
-CREATE POLICY "anon_insert_messages" ON contact_messages FOR INSERT TO anon WITH CHECK (true);
+-- Public read
+CREATE POLICY IF NOT EXISTS "anon_read_settings"   ON site_settings    FOR SELECT TO anon USING (true);
+CREATE POLICY IF NOT EXISTS "anon_read_articles"   ON articles         FOR SELECT TO anon USING (status = 'published');
+CREATE POLICY IF NOT EXISTS "anon_insert_messages" ON contact_messages FOR INSERT TO anon WITH CHECK (true);
