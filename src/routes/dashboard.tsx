@@ -129,28 +129,43 @@ function Dashboard() {
   const [supportLoading, setSupportLoading] = useState(false)
 
   useEffect(() => {
+    const token = localStorage.getItem('client_token')
+    if (!token) { navigate({ to: '/login' }); return }
+    // Clear malformed session (e.g. stored as 'undefined' string)
     const session = getClientSession()
-    if (!session) { navigate({ to: '/login' }); return }
+    if (!session) localStorage.removeItem('tharwah_client_auth')
     loadData()
   }, [])
 
   const loadData = async () => {
     setLoading(true); setError('')
+    const timeoutId = setTimeout(() => {
+      setLoading(false)
+      setError('انتهت مهلة الاتصال. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.')
+    }, 12000)
     try {
       const [pfRes, ptRes, txRes] = await Promise.all([
         getMyProfile(),
         getMyPortfolio(),
         getMyTransactions(20),
       ])
+      clearTimeout(timeoutId)
       setProfile(pfRes.client)
       setPortfolio(ptRes.portfolio)
       setTransactions(txRes.transactions || [])
+      // Rebuild broken session from fresh profile data
+      if (!getClientSession() && pfRes.client) {
+        localStorage.setItem('tharwah_client_auth', JSON.stringify(pfRes.client))
+      }
     } catch (e: unknown) {
-      if (e instanceof Error && e.message.toLowerCase().includes('unauthorized')) {
+      clearTimeout(timeoutId)
+      const msg = e instanceof Error ? e.message : 'فشل تحميل البيانات'
+      if (msg.toLowerCase().includes('unauthorized') || msg.toLowerCase().includes('missing token')) {
         clearClientSession(); navigate({ to: '/login' }); return
       }
-      setError(e instanceof Error ? e.message : 'فشل تحميل البيانات')
+      setError(msg)
     } finally {
+      clearTimeout(timeoutId)
       setLoading(false)
     }
   }
@@ -234,7 +249,10 @@ function Dashboard() {
         <div style={{ fontSize:'3rem', marginBottom:12 }}>⚠️</div>
         <div style={{ fontSize:'1rem', fontWeight:700, color:'#1E293B', marginBottom:8 }}>خطأ في تحميل البيانات</div>
         <div style={{ fontSize:'0.85rem', color:'#64748B', marginBottom:20 }}>{error}</div>
-        <button onClick={loadData} style={{ padding:'10px 24px', background:'linear-gradient(135deg,#0EA5E9,#38BDF8)', border:'none', borderRadius:10, color:'#fff', fontWeight:700, cursor:'pointer', fontFamily: font }}>إعادة المحاولة</button>
+        <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>
+          <button onClick={loadData} style={{ padding:'10px 24px', background:'linear-gradient(135deg,#0EA5E9,#38BDF8)', border:'none', borderRadius:10, color:'#fff', fontWeight:700, cursor:'pointer', fontFamily: font }}>إعادة المحاولة</button>
+          <button onClick={()=>{ clearClientSession(); navigate({ to: '/login' }) }} style={{ padding:'10px 24px', background:'transparent', border:'1px solid #CBD5E0', borderRadius:10, color:'#475569', fontWeight:700, cursor:'pointer', fontFamily: font }}>تسجيل الدخول مجدداً</button>
+        </div>
       </div>
     </div>
   )
