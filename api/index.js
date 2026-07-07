@@ -335,6 +335,46 @@ import { createClient } from '@supabase/supabase-js'
     } catch (e) { return res.status(500).json({ error: e.message }) }
   }
 
+  async function handleMessageReply(req, res) {
+    const decoded = requireAdmin(req, res)
+    if (!decoded) return
+    const { id } = req.query
+    if (!id) return res.status(400).json({ error: 'message id مطلوب' })
+    if (req.method === 'GET') {
+      try {
+        const { data, error } = await supabase.from('message_replies').select('*').eq('message_id', id).order('created_at', { ascending: true })
+        if (error) return res.status(500).json({ error: error.message })
+        return res.json({ replies: data || [] })
+      } catch (e) { return res.status(500).json({ error: e.message }) }
+    }
+    if (req.method === 'POST') {
+      const { reply_text } = req.body || {}
+      if (!reply_text || !reply_text.trim()) return res.status(400).json({ error: 'نص الرد مطلوب' })
+      try {
+        const { data, error } = await supabase.from('message_replies').insert({ message_id: id, admin_id: decoded.id, admin_name: decoded.name || 'الإدارة', reply_text: reply_text.trim() }).select('*').single()
+        if (error) return res.status(500).json({ error: error.message })
+        await supabase.from('contact_messages').update({ status: 'replied', updated_at: new Date().toISOString() }).eq('id', id)
+        return res.status(201).json({ reply: data })
+      } catch (e) { return res.status(500).json({ error: e.message }) }
+    }
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  async function handleClientMessages(req, res) {
+    const decoded = requireClient(req, res)
+    if (!decoded) return
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+    try {
+      const { data: messages, error: msgErr } = await supabase.from('contact_messages').select('*').eq('email', decoded.email.toLowerCase()).order('created_at', { ascending: false })
+      if (msgErr) return res.status(500).json({ error: msgErr.message })
+      const messagesWithReplies = await Promise.all((messages || []).map(async (msg) => {
+        const { data: replies } = await supabase.from('message_replies').select('*').eq('message_id', msg.id).order('created_at', { ascending: true })
+        return { ...msg, replies: replies || [] }
+      }))
+      return res.json({ messages: messagesWithReplies })
+    } catch (e) { return res.status(500).json({ error: e.message }) }
+  }
+
   async function handleSubAdmins(req, res) {
     const decoded = requireAdmin(req, res)
     if (!decoded) return
@@ -583,6 +623,8 @@ import { createClient } from '@supabase/supabase-js'
     '/api/v1/portfolios':          handlePortfolios,
     '/api/v1/settings':            handleSettings,
     '/api/v1/messages':            handleMessages,
+    '/api/v1/messages/reply':      handleMessageReply,
+    '/api/v1/client/messages':     handleClientMessages,
     '/api/v1/sub-admins':          handleSubAdmins,
     '/api/v1/notifications':       handleNotifications,
     '/api/v1/overview':            handleOverview,
@@ -600,8 +642,12 @@ import { createClient } from '@supabase/supabase-js'
   export default async function handler(req, res) {
     if (handleCors(req, res)) return
     const path = (req.url || '').split('?')[0].replace(/\/$/, '')
-    const routeHandler = routes[path]
+    let routeHandler = routes[path]
     if (routeHandler) return routeHandler(req, res)
+    const replyMatch = path.match(/^\/api\/v1\/messages\/(\d+)\/reply$/)
+    if (replyMatch) {
+      req.query = { ...req.query, id: replyMatch[1] }
+      return handleMessageReply(req, res)
+    }
     return res.status(404).json({ error: 'Route not found', path })
   }
-  
