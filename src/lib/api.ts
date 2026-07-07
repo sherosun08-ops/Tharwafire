@@ -13,6 +13,12 @@ function authHeaders(useClientToken = false): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+// Returns the Authorization header value (e.g. "Bearer <token>") or null if no token
+export function getAuthHeader(useClientToken = false): string | null {
+  const token = useClientToken ? getClientToken() : (getAdminToken() || getClientToken())
+  return token ? `Bearer ${token}` : null
+}
+
 async function request<T>(path: string, options: RequestInit = {}, useClientToken = false): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...options,
