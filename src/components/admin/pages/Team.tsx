@@ -163,7 +163,7 @@ export default function Team() {
           <div style={{fontSize:'0.82rem',color:'#64748B',marginBottom:16}}>قم بإضافة أول عضو للفريق</div>
           <button onClick={()=>setShowModal(true)} style={{padding:'10px 24px',background:'linear-gradient(135deg,#0EA5E9,#38BDF8)',border:'none',borderRadius:8,color:'#fff',fontWeight:700,cursor:'pointer',fontFamily:"'Cairo',sans-serif"}}>+ إضافة عضو جديد</button>
         </div>
-      : (
+      ) : (
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16}}>
           {team.map(member=>(
             <div key={member.id} style={{background:'#F8FAFC',border:'1px solid #E2E8F0',borderRadius:14,padding:20,display:'flex',flexDirection:'column',gap:14}}>
