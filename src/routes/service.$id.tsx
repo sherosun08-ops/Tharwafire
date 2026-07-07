@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CheckCircle, ArrowLeft, TrendingUp } from "lucide-react";
+import { CheckCircle, ArrowLeft, TrendingUp, Loader2 } from "lucide-react";
+import { useSiteSettings } from "../contexts/SiteSettingsContext";
 
 export const Route = createFileRoute("/service/$id")({ component: ServiceDetail });
 
-const services: Record<string, {
+// Default services as fallback
+const defaultServices: Record<string, {
   emoji: string; title: string; subtitle: string; desc: string;
   features: string[]; returns: string; risk: string; minInv: string;
   faq: { q: string; a: string }[];
@@ -72,7 +74,19 @@ const services: Record<string, {
 
 function ServiceDetail() {
   const { id } = Route.useParams();
+  const { settings, loading } = useSiteSettings();
+
+  // Get services from CMS or use defaults
+  const services = (settings?.services_data as Record<string, typeof defaultServices[string]>) || defaultServices;
   const service = services[id];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-gold" />
+      </div>
+    );
+  }
 
   if (!service) {
     return (
