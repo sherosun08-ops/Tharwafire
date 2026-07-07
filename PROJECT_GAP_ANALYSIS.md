@@ -1,523 +1,808 @@
-# 📋 وثيقة تحليل الفجوات - مشروع ثروة كابيتال (Tharwafire)
+# 📋 وثيقة التحليل الشامل - مشروع ثروة كابيتال
 
 **تاريخ التحليل:** 7 يوليو 2026  
 **المستودع:** sherosun08-ops/Tharwafire  
-**الهدف:** تحديد المشاكل والنواقص ليصبح المشروع إنتاجي ومكتمل 100%
+**الهدف:** توثيق المكتمل والناقص مع التركيز على التكامل بين واجهة المستخدم ولوحة الإدارة
 
 ---
 
 ## 📊 ملخص تنفيذي
 
-| الفئة | الحالة |
-|-------|--------|
-| الواجهة الأمامية (Frontend) | ⚠️ مكتملة بصريًا لكن تعتمد على بيانات وهمية |
-| واجهة الإدارة (Admin Panel) | ⚠️ مكتملة جزئيًا - بعض الصفحات وهمية |
-| واجهة العميل (Client Dashboard) | ⚠️ مكتملة جزئيًا |
-| الباك-إند (API) | ✅ موجود لكن ناقص endpoints |
-| قاعدة البيانات | ✅ موجودة لكن ناقصة جداول |
-| الأمان | ❌ ثغرات خطيرة |
-| الخدمات الخارجية | ❌ غير مفعلة |
+| الفئة | الحالة العامة | نسبة الإكمال |
+|-------|--------------|-------------|
+| واجهة المستخدم (User Interface) | ⚠️ مكتملة بصريًا | 85% |
+| لوحة الإدارة (Admin Panel) | ⚠️ مكتملة جزئيًا | 70% |
+| بوابة العملاء (Client Portal) | ⚠️ وظائف أساسية | 60% |
+| التكامل بين الواجهات | ❌ ناقص | 40% |
+| نظام التواصل والردود | ❌ ناقص | 30% |
+| الباك-إند (API) | ⚠️ ناقص endpoints | 65% |
+| قاعدة البيانات | ⚠️ ناقصة جداول | 60% |
 
 ---
 
-## 🔴 أولاً: مشاكل التصميم والواجهات
+# 🖥️ القسم الأول: لوحة الإدارة (Admin Panel)
 
-### 1.1 مشاكل الواجهة الأمامية للموقع العام
+## 1. العملاء والحسابات (Clients)
 
-| المكون | المشكلة | الخطورة |
+### ✅ المكتمل
+| العنصر | الحالة | الملف |
+|--------|--------|-------|
+| قائمة العملاء | ✅ يعمل | `Clients.tsx` |
+| البحث والفلترة | ✅ يعمل | `Clients.tsx:search, status` |
+| إضافة عميل جديد | ✅ يعمل | `POST /api/v1/clients` |
+| تعديل بيانات عميل | ✅ يعمل | `PATCH /api/v1/clients` |
+| حذف عميل | ✅ يعمل | `DELETE /api/v1/clients` |
+| عرض تفاصيل العميل | ✅ يعمل | `Clients.tsx:viewDetails` |
+| تغيير حالة العميل | ✅ يعمل | `PATCH status` |
+| سجل نشاط العميل | ✅ يعمل | `audit_logs` |
+
+### ❌ الناقص
+| العنصر | المشكلة | المطلوب |
 |--------|---------|---------|
-| `LiveTicker.tsx` | أسعار الأسواق ثابتة وهمية - غير متصلة بـ API حقيقي | 🔴 عالية |
-| `MarketsPreview.tsx` | يعرض بيانات ثابتة وليس حية من API | 🟡 متوسطة |
-| `Testimonials.tsx` | يقرأ من site_settings لكن يمكن تحسين عرضه | 🟢 منخفضة |
-| `SiteHeader.tsx` | روابط التنقل تعمل لكن يمكن إضافة مفتاح تبديل اللغة | 🟡 متوسطة |
-| `SiteFooter.tsx` | الروابط الاجتماعية وهمية - تحتاج روابط حقيقية | 🟡 متوسطة |
+| إنشاء بيانات دخول للعميل | ❌ غير موجود | `POST /api/v1/clients/:id/credentials` |
+| إحصائيات العميل | ⚠️ بيانات وهمية | ربط بـ real data |
+| تصدير قائمة العملاء | ❌ غير موجود | `GET /api/v1/clients/export` |
+| تعيين مستشار للعميل | ❌ غير مرتبط | ربط بجدول advisors |
 
-### 1.2 مشاكل واجهة لوحة الإدارة
+---
 
-#### صفحة `Security.tsx` - ❌ كاملة البيانات وهمية
+## 2. المحافظ الاستثمارية (Portfolios)
 
-```tsx
-// المشاكل المحددة:
-- تبويب "سجلات النشاط": يستخدم mockLogs من adminData.ts
-  → المطلوب: استدعاء getAuditLogs() → GET /api/v1/audit-logs
+### ✅ المكتمل
+| العنصر | الحالة | الملف |
+|--------|--------|-------|
+| قائمة المحافظ | ✅ يعمل | `Portfolios.tsx` |
+| عرض تفاصيل المحفظة | ✅ يعمل | `Portfolios.tsx:viewPortfolio` |
+| تعديل المحفظة | ✅ يعمل | `PATCH /api/v1/portfolios` |
+| إضافة محفظة جديدة | ✅ يعمل | `POST /api/v1/portfolios` |
+| حذف محفظة | ✅ يعمل | `DELETE /api/v1/portfolios` |
 
-- تبويب "الجلسات النشطة": مصفوفة sessions[] مكتوبة يدويًا داخل الملف
-  → المطلوب: إنشاء جدول sessions في قاعدة البيانات + endpoint
+### ❌ الناقص
+| العنصر | المشكلة | المطلوب |
+|--------|---------|---------|
+| أسعار الأصول الحية | ❌ أسعار ثابتة | ربط بـ TwelveData API |
+| تحديث الأسعار التلقائي | ❌ غير موجود | Cron job |
+| رسوم بيانية الأداء | ❌ وهمية | `GET /api/v1/portfolios/:id/performance` |
+| تاريخ الأصول | ❌ غير موجود | جدول `portfolio_assets_history` |
+| توزيع الأصول | ⚠️ عرض فقط | تحسين الرسم البياني |
+| مقارنة المحافظ | ❌ غير موجود | صفحة مقارنة جديدة |
 
-- تبويب "التهديدات": مصفوفة threats[] مكتوبة يدويًا
-  → المطلوب: مصدر حقيقي أو إزالة هذا التبويب
+---
 
-- إعدادات الأمان (toggles): toggleItem() يغير local state فقط
-  → المطلوب: حفظ الإعدادات عبر saveSettings API
+## 3. العمليات (Transactions)
+
+### ✅ المكتمل
+| العنصر | الحالة | الملف |
+|--------|--------|-------|
+| قائمة المعاملات | ✅ يعمل | `Transactions.tsx` |
+| البحث والفلترة | ✅ يعمل | `type, status, client_id` |
+| إضافة معاملة | ✅ يعمل | `POST /api/v1/transactions` |
+| تعديل معاملة | ✅ يعمل | `PATCH /api/v1/transactions` |
+| حذف معاملة | ✅ يعمل | `DELETE /api/v1/transactions` |
+| تغيير حالة المعاملة | ✅ يعمل | `pending/completed/rejected` |
+
+### ❌ الناقص
+| العنصر | المشكلة | المطلوب |
+|--------|---------|---------|
+| الموافقة الجماعية | ❌ غير موجود | Batch approval |
+| تصدير المعاملات | ❌ غير موجود | `GET /api/v1/transactions/export` |
+| إشعارات المعاملات | ❌ غير مفعلة | ربط بـ Resend/SMS |
+| تقارير المعاملات | ❌ وهمية | بيانات حقيقية |
+
+---
+
+## 4. الرسائل (Messages)
+
+### ✅ المكتمل
+| العنصر | الحالة | الملف |
+|--------|--------|-------|
+| قائمة رسائل التواصل | ✅ يعمل | `Messages.tsx` (تبويب التواصل) |
+| عرض تفاصيل الرسالة | ✅ يعمل | `Messages.tsx:viewMsg` |
+| تغيير حالة الرسالة | ✅ يعمل | `new/read/replied/archived` |
+| حذف رسالة | ✅ يعمل | `DELETE /api/v1/messages` |
+| فلترة حسب الحالة | ✅ تعمل | `status filter` |
+
+### ❌ الناقص
+| العنصر | المشكلة | المطلوب |
+|--------|---------|---------|
+| **الرد على الرسالة** | ❌ **غير موجود** | `POST /api/v1/messages/:id/reply` |
+| **إشعار المستخدم بالرد** | ❌ **غير موجود** | إرسال بريد/SMS للعميل |
+| **سجل الردود** | ❌ **غير موجود** | جدول `message_replies` |
+| تبويب المراسلات المباشرة | ❌ وهمي | نظام chat أو إزالة |
+| محادثات واتساب | ❌ غير موجود | WhatsApp Business API |
+
+### 🔴 مشكلة جوهرية: كيف يستقبل المستخدم الرد؟
+
+**الحالة الحالية:**
+```
+المستخدم ← يرسل رسالة من صفحة "تواصل معنا"
+         ← الرسالة تُحفظ في قاعدة البيانات ✅
+         ← المشرف يراها في لوحة الإدارة ✅
+         ← المشرف يقرأها ✅
+         ← المشرف يضغط "رد" ← ❌ لا يوجد!
+         ← العميل لا يعرف أن رسالته قُرئت أو رُد عليها ❌
 ```
 
-#### صفحة `Reports.tsx` - ❌ رسوم بيانية وهمية
-
-```tsx
-// المشاكل المحددة:
-- رسم Revenue: يستخدم chartRevenue من adminData.ts
-- رسم AUM: يستخدم chartAUM من adminData.ts  
-- رسم New Clients: يستخدم chartNewClients من adminData.ts
-- KPIs (+18.3%, $94K...): أرقام ثابتة hardcoded
-- أفضل العملاء: مصفوفة hardcoded
-- أداء المستشارين: مصفوفة hardcoded
-- فلاتر الفترة: لا تؤثر على البيانات
-- زر "تصدير PDF": بلا handler
-
-// المطلوب:
-GET /api/v1/reports?period=month
-→ حساب KPIs حقيقية من قاعدة البيانات
+**المطلوب:**
 ```
-
-#### صفحة `Team.tsx` - ⚠️ قائمة الأعضاء وهمية
-
-```tsx
-// المشاكل:
-- قائمة الأعضاء: تقرأ من mockTeam في adminData.ts
-- إحصائيات الأدوار: تُحسب من mockTeam
-
-// المطلوب:
-useEffect(() => { getSubAdmins(); }, []);
-```
-
-#### صفحة `Messages.tsx` - ⚠️ تبويب المراسلات المباشرة وهمي
-
-```tsx
-// المشاكل:
-- قائمة المحادثات: mockMessages
-- إرسال رد: sendMsg() تعيد setInput('') فقط
-- عداد الرسائل غير المقروءة: يعتمد على mockMessages
-
-// تبويب "رسائل التواصل" يعمل ✅
-```
-
-#### صفحة `Overview.tsx` - ⚠️ رسوم بيانية وهمية
-
-```tsx
-// المشاكل:
-- رسم AUM: uses chartAUM من adminData.ts
-- رسم Revenue: uses chartRevenue من adminData.ts
-- الإجراءات السريعة: أزرار ديكورية بلا وظيفة
-
-// KPIs الرئيسية من getOverview() تعمل ✅
-```
-
-#### صفحة `Notifications.tsx` - ⚠️ الحذف غير مستمر
-
-```tsx
-// المشاكل:
-- حذف إشعار: setNotifs(filter...) فقط - لا API call
-- تعليم الكل مقروء: local state فقط
-- قواعد الإشعارات: مصفوفة ثابتة
-
-// التحميل وتعليم الواحدة مقروءة يعمل ✅
+1. إنشاء جدول message_replies:
+   - id, message_id, reply_text, replied_by, created_at
+   
+2. Endpoint للرد:
+   POST /api/v1/messages/:id/reply
+   → يرسل بريد للعميل مع الرد
+   → يمكن إرسال SMS أيضًا
+   
+3. في صفحة التواصل:
+   - عرض رسالة العميل
+   - خانة لكتابة الرد
+   - زر "إرسال الرد"
+   
+4. للعميل:
+   - إشعار بالبريد عند وصول رد
+   - لو كان لديه حساب: يرى الرسائل في بوابته
 ```
 
 ---
 
-## 🔴 ثانياً: الواجهات الناقصة بالكامل
+## 5. المحتوى (Content)
 
-### 2.1 واجهة العميل (Client Dashboard) - النواقص
+### ✅ المكتمل
+| العنصر | الحالة | الملف |
+|--------|--------|-------|
+| إدارة Hero | ✅ يعمل | `HeroManager.tsx` |
+| إدارة About | ✅ يعمل | `AboutManager.tsx` |
+| إدارة الخدمات | ✅ يعمل | `ServicesManager.tsx` |
+| إدارة الأسئلة الشائعة | ✅ يعمل | `FAQManager.tsx` |
+| إدارة شهادات العملاء | ✅ يعمل | `TestimonialsManager.tsx` |
+| إدارة سياسة الخصوصية | ✅ يعمل | `PrivacyPolicyManager.tsx` |
+| إدارة الأسواق | ✅ يعمل | `MarketsManager.tsx` |
+| إدارة المقالات | ✅ يعمل | `Content.tsx` |
+| حفظ في site_settings | ✅ يعمل | `POST /api/v1/settings` |
 
-| الصفحة | الحالة | المطلوب |
-|--------|--------|---------|
-| لوحة التحكم الرئيسية | ⚠️ موجودة لكن بيانات وهمية | ربط بـ API حقيقي |
-| صفحة المحفظة | ⚠️ موجودة لكن أسعار ثابتة | ربط بـ APIs الأسعار الحية |
-| سجل المعاملات | ⚠️ موجود لكن محدود | فلترة متقدمة + تصدير |
-| صفحة الملف الشخصي | ⚠️ موجودة | إمكانية التعديل |
-| **صفحة الإشعارات** | ❌ ناقصة بالكامل | إنشاء صفحة جديدة |
-| **صفحة الدعم الفني** | ❌ ناقصة بالكامل | نموذج تواصل + تذاكر |
-| **صفحة التقارير** | ❌ ناقصة بالكامل | تقارير شهرية PDF |
-| **صفحة KYC** | ❌ ناقصة بالكامل | رفع الوثائق + حالة التحقق |
-| **صفحة الإعدادات** | ❌ ناقصة بالكامل | تغيير كلمة المرور، الإشعارات |
-
-### 2.2 واجهة الإدارة (Admin Panel) - النواقص
-
-| الصفحة | الحالة | المطلوب |
-|--------|--------|---------|
-| لوحة التحكم (Overview) | ⚠️ جزئي | رسوم بيانية حقيقية |
-| إدارة العملاء | ✅ تعمل | - |
-| إدارة المحافظ | ✅ تعمل | أسعار حية |
-| إدارة المعاملات | ✅ تعمل | - |
-| المحتوى (CMS) | ✅ يعمل | - |
-| الإعدادات | ✅ تعمل | - |
-| **صفحة التقارير المتقدمة** | ❌ وهمية | تحليلات حقيقية + تصدير |
-| **صفحة إدارة المقالات** | ⚠️ جزئي | محرر WYSIWYG |
-| **صفحة النشرة البريدية** | ❌ ناقصة | إرسال بريد جماعي |
-| **صفحة سجل التدقيق** | ❌ ناقصة | عرض logs من API |
-| **صفحة الإعدادات الأمنية** | ❌ وهمية | حفظ حقيقي |
-| **صفحة التكاملات** | ❌ ناقصة | إعدادات الخدمات الخارجية |
+### ❌ الناقص
+| العنصر | المشكلة | المطلوب |
+|--------|---------|---------|
+| محرر نص متقدم (WYSIWYG) | ⚠️ textarea عادي | TinyMCE/Quill |
+| رفع الصور للمعاينة | ⚠️ URL فقط | Supabase Storage |
+| جدولة النشر | ❌ غير موجود | publish_at |
+| معاينة قبل الحفظ | ⚠️ محدودة | تحسين UX |
+| تاريخ التعديلات | ❌ غير موجود | جدول revisions |
 
 ---
 
-## 🟡 ثالثاً: أقسام ناقصة في قاعدة البيانات
+## 6. التقارير (Reports)
 
-### الجداول الموجودة في `supabase/schema.sql`:
+### ❌ كامل الصفحة وهمية
 
-✅ `admins`  
-✅ `sub_admins`  
-✅ `clients`  
-✅ `portfolios`  
-✅ `transactions`  
-✅ `contact_messages`  
-✅ `site_settings`  
-✅ `articles`  
-✅ `notifications`  
-✅ `audit_logs`  
+| العنصر | الحالة | المشكلة |
+|--------|--------|---------|
+| رسم AUM | ❌ وهمي | `chartAUM` من adminData.ts |
+| رسم Revenue | ❌ وهمي | `chartRevenue` من adminData.ts |
+| رسم نمو العملاء | ❌ وهمي | `chartNewClients` من adminData.ts |
+| KPIs (+18.3%, $94K) | ❌ وهمي | أرقام hardcoded |
+| أفضل العملاء | ❌ وهمي | مصفوفة ثابتة |
+| أداء المستشارين | ❌ وهمي | مصفوفة ثابتة |
+| فلاتر الفترة | ⚠️ لا تعمل | لا تؤثر على البيانات |
+| تصدير PDF | ❌ غير موجود | لا handler |
 
-### الجداول الناقصة:
+### ✅ المطلوب للإصلاح
+
+```javascript
+// API endpoints مطلوبة:
+GET /api/v1/reports/overview?period=month
+GET /api/v1/reports/aum-chart?period=month
+GET /api/v1/reports/revenue-chart?period=month
+GET /api/v1/reports/clients-growth?period=month
+GET /api/v1/reports/export/pdf?period=month
+
+// حسابات حقيقية من قاعدة البيانات:
+- totalAUM = sum(portfolios.current_value)
+- totalRevenue = sum(transactions where type='deposit' and status='completed')
+- newClients = count(clients where created_at within period)
+- revenueChange = (currentPeriod - lastPeriod) / lastPeriod * 100
+```
+
+---
+
+## 7. Hero Section
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| تعديل النص الرئيسي | ✅ يعمل |
+| تعديل النص الفرعي | ✅ يعمل |
+| تعديل نص Typewriter | ✅ يعمل |
+| تعديل Badge | ✅ يعمل |
+| تعديل الزر الرئيسي | ✅ يعمل |
+| حفظ التحديثات | ✅ يعمل |
+
+### ❌ الناقص
+| العنصر | المشكلة |
+|--------|---------|
+| صورة الخلفية | ⚠️ URL فقط - لا رفع |
+| تحسين السيو (meta) | ❌ غير مرتبط |
+| معاينة مباشرة | ❌ غير موجودة |
+
+---
+
+## 8. الخدمات (Services)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| إضافة خدمة جديدة | ✅ يعمل |
+| تعديل خدمة | ✅ يعمل |
+| حذف خدمة | ✅ يعمل |
+| ترتيب الخدمات | ✅ يعمل (order) |
+| أيقونة الخدمة | ✅ يعمل |
+| وصف الخدمة | ✅ يعمل |
+
+### ⚠️ مشكلة التكامل مع واجهة المستخدم
+```
+المشرف ← يضيف/يعدل الخدمات في لوحة الإدارة ✅
+      ← التغييرات تُحفظ في site_settings ✅
+      
+المستخدم ← يفتح صفحة "خدماتنا"
+        ← يرى الخدمات من site_settings ✅
+        ← يضغط على خدمة ← يفتح صفحة service.$id.tsx
+        ← ❌ الصفحة تعرض بيانات من الكود وليس API!
+```
+
+---
+
+## 9. الأسواق (Markets)
+
+### ✅ المكتمل (واجهة الإدارة)
+| العنصر | الحالة |
+|--------|--------|
+| إضافة أصل جديد | ✅ يعمل |
+| تعديل بيانات الأصل | ✅ يعمل |
+| حذف أصل | ✅ يعمل |
+| ترتيب الأصول | ✅ يعمل |
+
+### ❌ الناقص (التكامل مع الأسعار الحية)
+```
+المشرف ← يضيف أصل (مثلاً: AAPL) في لوحة الإدارة ✅
+      ← يحدد رمزه واسمه ✅
+      
+المشكلة: السعر ثابت! لا يتحدث تلقائيًا ❌
+
+المطلوب:
+1. ربط بـ TwelveData API
+2. Cron job لتحديث الأسعار كل دقيقة
+3. حفظ الأسعار في asset_price_history
+4. عرض السعر الحالي والتغير في واجهة المستخدم
+```
+
+---
+
+## 10. الأسئلة الشائعة (FAQ)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| إضافة سؤال جديد | ✅ يعمل |
+| تعديل سؤال وجواب | ✅ يعمل |
+| حذف سؤال | ✅ يعمل |
+| ترتيب الأسئلة | ✅ يعمل |
+| التكامل مع واجهة المستخدم | ✅ يعمل |
+
+---
+
+## 11. من نحن (About)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| تعديل النص التعريفي | ✅ يعمل |
+| تعديل الإحصائيات | ✅ يعمل |
+| تعديل صورة الفريق | ✅ يعمل |
+| حفظ التحديثات | ✅ يعمل |
+
+---
+
+## 12. التصميم والتنقل (Site Design)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| تعديل الشعار | ✅ يعمل |
+| تعديل الألوان | ✅ يعمل |
+| تعديل الخطوط | ✅ يعمل |
+| تعديل روابط التنقل | ✅ يعمل |
+| تعديل الفوتر | ✅ يعمل |
+
+---
+
+## 13. سياسة الخصوصية (Privacy Policy)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| تعديل النص بالعربية | ✅ يعمل |
+| تعديل النص بالإنجليزية | ✅ يعمل |
+| حفظ التحديثات | ✅ يعمل |
+| التكامل مع واجهة المستخدم | ✅ يعمل |
+
+---
+
+## 14. الإشعارات (Notifications)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| عرض قائمة الإشعارات | ✅ يعمل |
+| تعليم إشعار مقروء | ✅ يعمل |
+| عداد غير المقروءة | ✅ يعمل |
+
+### ❌ الناقص
+| العنصر | المشكلة |
+|--------|---------|
+| حذف إشعار | ❌ local state فقط |
+| تعليم الكل مقروء | ❌ local state فقط |
+| قواعد الإشعارات | ❌ مصفوفة ثابتة |
+| إشعارات البريد | ❌ غير مفعلة |
+| إشعارات SMS | ❌ غير مفعلة |
+
+---
+
+## 15. إضافة مشرف (Sub-Admins)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| إضافة مشرف جديد | ✅ يعمل |
+| تحديد صلاحيات | ✅ يعمل (permissions array) |
+| تفعيل/تعطيل مشرف | ✅ يعمل |
+| حذف مشرف | ✅ يعمل |
+
+### ❌ الناقص
+| العنصر | المشكلة |
+|--------|---------|
+| تحقق الصلاحيات في API | ⚠️ غير محقق | فحص permissions[] في كل endpoint |
+| سجل نشاط المشرف | ❌ غير موجود | عرض audit_logs للمشرف |
+| تعديل صلاحيات المشرف | ⚠️ محدود | تحسين UI |
+
+---
+
+## 16. الإعدادات (Settings)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| الإعدادات العامة | ✅ يعمل (اسم الموقع، الوصف) |
+| إعدادات المظهر | ✅ يعمل (الألوان، الخطوط) |
+
+### ❌ ما تم استبعاده (موجود لكن لا يتم تركيز عليه)
+- إعدادات البريد
+- إعدادات المالية
+- إعدادات SEO
+- إعدادات API
+- التكاملات
+- النسخ الاحتياطي
+
+---
+
+# 👤 القسم الثاني: واجهة المستخدم (User Interface)
+
+## 1. الصفحة الرئيسية (Home)
+
+### ✅ المكتمل
+| المكون | الحالة |
+|--------|--------|
+| Hero Section | ✅ يعمل ويتحدث من CMS |
+| Live Ticker | ⚠️ يعمل لكن أسعار وهمية |
+| قسم الخدمات | ✅ يعمل ويتحدث من CMS |
+| قسم الإحصائيات | ✅ يعمل ويتحدث من CMS |
+| قسم الأسواق | ⚠️ يعمل لكن أسعار وهمية |
+| قسم الأخبار | ✅ يعمل من articles API |
+| قسم CTA | ✅ يعمل |
+
+### ❌ الناقص
+| المكون | المشكلة | المطلوب |
+|--------|---------|---------|
+| LiveTicker | أسعار ثابتة | ربط بـ TwelveData |
+| MarketsPreview | أسعار ثابتة | تحديث تلقائي |
+| Trust badges | ⚠️ نص ثابت | جعلها قابلة للتعديل |
+
+---
+
+## 2. من نحن (About Page)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| النص التعريفي | ✅ يعمل من site_settings |
+| صور الفريق | ✅ تعمل |
+| الإحصائيات | ✅ تعمل |
+| القيم | ✅ تعمل |
+
+### 🔴 مشكلة التكامل
+```
+المشرف ← يعدل "من نحن" في HeroManager.tsx ✅
+      ← التغييرات تُحفظ ✅
+      
+المستخدم ← يفتح صفحة about.tsx
+        ← ❌ تعرض بيانات من الكود!
+        
+المطلوب: قراءة البيانات من site_settings في about.tsx
+```
+
+---
+
+## 3. خدماتنا (Services Page)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| قائمة الخدمات | ✅ تعمل من site_settings |
+| بطاقات الخدمات | ✅ تعمل |
+| الانتقال لتفاصيل الخدمة | ✅ يعمل |
+
+### ❌ مشكلة صفحة التفاصيل
+```
+services.tsx ← يقرأ من site_settings ✅
+service.$id.tsx ← ❌ بيانات hardcoded!
+
+المطلوب: قراءة بيانات الخدمة من site_settings
+```
+
+---
+
+## 4. الأسواق (Markets Page)
+
+### ✅ المكتمل (بصريًا)
+| العنصر | الحالة |
+|--------|--------|
+| جدول الأسعار | ✅ يعرض |
+| فلاتر الأصول | ✅ تعمل |
+| البحث | ✅ يعمل |
+
+### 🔴 مشكلة الأسعار
+```
+markets.tsx ← يعمل بصريًا ✅
+           ← ❌ الأسعار ثابتة/wired
+           ← ❌ لا يتحدث تلقائيًا
+           
+المطلوب:
+1. WebSocket أو polling للأسعار الحية
+2. أو على الأقل: تحديث عند تحميل الصفحة
+3. عرض التغير اليومي (safq, change%)
+```
+
+---
+
+## 5. الأخبار (News Page)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| قائمة المقالات | ✅ تعمل من articles API |
+| فلترة التصنيفات | ✅ تعمل |
+| البحث | ✅ يعمل |
+| صفحة المقال الواحد | ✅ تعمل |
+| عداد القراءات | ✅ يعمل |
+
+---
+
+## 6. الأسئلة الشائعة (FAQ Page)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| قائمة الأسئلة | ✅ تعمل من faqs_data |
+| البحث | ✅ يعمل |
+| تأثير التوسعة | ✅ يعمل |
+| التكامل مع الإدارة | ✅ تام |
+
+---
+
+## 7. تواصل معنا (Contact Page)
+
+### ✅ المكتمل (من ناحية الإرسال)
+| العنصر | الحالة |
+|--------|--------|
+| نموذج التواصل | ✅ يعمل |
+| إدخال رقم الهاتف (مع رمز الدولة) | ✅ ممتاز |
+| قائمة الخدمات | ✅ تعمل |
+| التحقق من البيانات | ✅ يعمل |
+| حفظ الرسالة في قاعدة البيانات | ✅ يعمل |
+| رسالة نجاح الإرسال | ✅ تعمل |
+
+### 🔴❌ PROBLEM: كيف يستقبل المستخدم الرد؟
+
+**تدفق الرسالة الحالي:**
+```
+1. المستخدم يملأ النموذج في contact.tsx ✅
+2. يضغط "إرسال"
+3. الرسالة تُرسل لـ POST /api/v1/messages ✅
+4. الرسالة تُحفظ في contact_messages ✅
+5. المستخدم يرى رسالة "تم الإرسال بنجاح" ✅
+6. المشرف يدخل لوحة الإدارة
+7. يفتح Messages.tsx ← يرى الرسالة ✅
+8. يقرأ الرسالة
+9. ❌❌❌ ينقر "رد" ← لا يوجد زر للرد!
+10. ❌❌❌ لا يوجد أي طريقة للرد على المستخدم!
+```
+
+**المطلوب بشكل عاجل:**
+
+```javascript
+// 1. تحديث واجهة الرسائل في لوحة الإدارة:
+// Messages.tsx - إضافة قسم الرد:
+<div className="reply-section">
+  <textarea placeholder="اكتب ردك هنا..." />
+  <button onClick={handleReply}>إرسال الرد</button>
+</div>
+
+// 2. API endpoint للرد:
+// POST /api/v1/messages/:id/reply
+// Body: { reply: string }
+// Response: { success: true, reply_id: uuid }
+
+// 3. في Backend:
+async function handleMessageReply(req, res) {
+  const { id } = req.params;
+  const { reply } = req.body;
+  
+  // جلب الرسالة الأصلية
+  const { data: msg } = await supabase
+    .from('contact_messages')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  // إرسال بريد للعميل
+  await resend.emails.send({
+    from: 'support@tharwahcapital.com',
+    to: msg.email,
+    subject: `رد على استفسارك: ${msg.service || 'عام'}`,
+    html: `
+      <h2>مرحباً ${msg.name}،</h2>
+      <p>${reply}</p>
+      <hr />
+      <small>رسالتك الأصلية: ${msg.message}</small>
+    `
+  });
+  
+  // تحديث حالة الرسالة
+  await supabase
+    .from('contact_messages')
+    .update({ status: 'replied', updated_at: new Date() })
+    .eq('id', id);
+    
+  // تسجيل الرد
+  await supabase
+    .from('message_replies') // جدول جديد مطلوب
+    .insert({
+      message_id: id,
+      reply_text: reply,
+      replied_by: req.admin.id
+    });
+}
+
+// 4. جدول message_replies:
+CREATE TABLE message_replies (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id  UUID REFERENCES contact_messages(id),
+  reply_text  TEXT NOT NULL,
+  replied_by  UUID REFERENCES admins(id),
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+## 8. بوابة العملاء (Client Portal / Login)
+
+### ✅ المكتمل
+| العنصر | الحالة |
+|--------|--------|
+| صفحة تسجيل الدخول | ✅ تعمل |
+| التحقق من بيانات الدخول | ✅ يعمل من API |
+| حفظ الجلسة | ✅ يعمل |
+| تحويل للوحة التحكم | ✅ يعمل |
+
+### بوابة العملاء (Dashboard) - التفاصيل
+
+#### ✅ المكتمل
+| التبويب | العناصر |
+|---------|---------|
+| الرئيسية | البيانات الشخصية ✅، كود المحفظة ✅، حالة العضوية ✅ |
+| الاستثمارات | عرض الأصول ✅، أسهم سعودية ✅، خليجية ✅، عالمية ✅، عملات رقمية ✅، فوركس ✅، معادن ✅، نفط ✅ |
+| البنوك | عرض حسابات IBAN ✅، إخفاء/نسخ ✅ |
+| المعاملات | قائمة المعاملات ✅، فلترة حسب النوع ✅ |
+| التواصل | إرسال رسالة للإدارة ✅ |
+| الإعدادات | عرض الملف الشخصي ✅، تسجيل الخروج ✅ |
+
+#### 🔴 المشاكل والنواقص
+
+| المشكلة | التفاصيل |
+|---------|----------|
+| **أسعار الأصول ثابتة** | تعرض البيانات المحفوظة فقط، لا تحديث للأسعار الحية |
+| **لا إشعارات للمعاملات** | العميل لا يعرف بحالة معاملاته إلا بالدخول للبوابة |
+| **لا تقارير شهرية** | لا توجد تقارير PDF للعميل |
+| **لا ردود على التواصل** | العميل يرسل رسالة لكن لا يرى أي رد! |
+| **لا تحقق KYC** | لا توجد صفحة لرفع الوثائق والتحقق |
+| **لا تغيير كلمة مرور** | العميل لا يستطيع تغيير كلمة المرور |
+| **لا تذاكر دعم** | التواصل رسائل "من طرف واحد" فقط |
+
+#### ❌ مشكلة التواصل من بوابة العميل
+
+```
+العميل ← يدخل "التواصل" في dashboard.tsx ✅
+      ← يكتب رسالة ✅
+      ← يضغط "إرسال" ✅
+      ← الرسالة تُحفظ في contact_messages (source='client-dashboard') ✅
+      ← يرى رسالة "تم الإرسال بنجاح" ✅
+      
+❌ ولكن:
+- العميل لا يرى سجل رسائله!
+- العميل لا يرى ردود الإدارة!
+- لا يوجد تبويب "الرسائل الواردة"
+- لا إشعارات عند وصول رد
+```
+
+**المطلوب:**
+```javascript
+// في dashboard.tsx - تبويب التواصل المحدث:
+// 1. عرض سجل الرسائل السابقة (من contact_messages where email = client.email)
+// 2. عرض الردود بجانب كل رسالة
+// 3. إشعار عند وصول رد جديد
+
+// API المطلوب:
+GET /api/v1/client/messages
+→ يعيد الرسائل والردود للعميل الحالي
+```
+
+---
+
+# 🔗 القسم الثالث: التكامل بين الواجهات
+
+## المشكلة الأساسية: انفصال البيانات
+
+| ما يعدله المشرف | ما يراه المستخدم | حالة التكامل |
+|-----------------|------------------|--------------|
+| Hero Section | Hero.tsx | ✅ متكامل |
+| الخدمات | services.tsx | ✅ متكامل |
+| تفاصيل الخدمة | service.$id.tsx | ❌ غير متكامل (بيانات hardcoded) |
+| الأسواق | markets.tsx | ⚠️ متكامل جزئيًا (أسعار ثابتة) |
+| الأسئلة الشائعة | faq.tsx | ✅ متكامل |
+| من نحن | about.tsx | ❌ غير متكامل (بيانات hardcoded) |
+| الإحصائيات | StatsSection | ✅ متكامل |
+| سياسة الخصوصية | Privacy Page | ✅ متكامل |
+| المقالات | news.tsx, article.$slug.tsx | ✅ متكامل |
+
+## 🔴 الخلاصة: ما ينقص التكامل
+
+1. **صفحة "من نحن" (about.tsx):** تعرض بيانات hardcoded بدل قراءة من site_settings
+2. **صفحة "تفاصيل الخدمة" (service.$id.tsx):** تعرض بيانات hardcoded
+3. **الأسعار الحية:** لا توجد مكانيزم لتحديث الأسعار من API خارجي
+4. **نظام الردود:** لا يوجد تكامل بين رسائل المستخدم وردود المشرف
+
+---
+
+# 🔧 القسم الرابع: الباك-إند (Backend)
+
+## API Endpoints - الحالة بالتفصيل
+
+### ✅ Endpoints المكتملة
+
+| Endpoint | الوصف | التكامل |
+|----------|-------|---------|
+| `POST /api/v1/auth/admin-login` | دخول المشرف | ✅ |
+| `POST /api/v1/auth/client-login` | دخول العميل | ✅ |
+| `GET /api/v1/auth/verify` | التحقق من token | ✅ |
+| `GET /api/v1/clients` | قائمة العملاء | ✅ |
+| `POST /api/v1/clients` | إنشاء عميل | ✅ |
+| `PATCH /api/v1/clients` | تعديل عميل | ✅ |
+| `DELETE /api/v1/clients` | حذف عميل | ✅ |
+| `GET /api/v1/portfolios` | قائمة المحافظ | ✅ |
+| `POST /api/v1/portfolios` | إنشاء محفظة | ✅ |
+| `PATCH /api/v1/portfolios` | تعديل محفظة | ✅ |
+| `DELETE /api/v1/portfolios` | حذف محفظة | ✅ |
+| `GET /api/v1/transactions` | قائمة المعاملات | ✅ |
+| `POST /api/v1/transactions` | إنشاء معاملة | ✅ |
+| `PATCH /api/v1/transactions` | تعديل معاملة | ✅ |
+| `DELETE /api/v1/transactions` | حذف معاملة | ✅ |
+| `GET /api/v1/messages` | قائمة الرسائل (للمشرف) | ✅ |
+| `POST /api/v1/messages` | إنشاء رسالة (للزائر) | ✅ |
+| `PATCH /api/v1/messages` | تغيير حالة رسالة | ✅ |
+| `GET /api/v1/settings` | قراءة الإعدادات | ✅ |
+| `POST /api/v1/settings` | حفظ الإعدادات | ✅ |
+| `GET /api/v1/articles` | قائمة المقالات | ✅ |
+| `POST /api/v1/articles` | إنشاء مقال | ✅ |
+| `GET /api/v1/client/profile` | ملف العميل | ✅ |
+| `GET /api/v1/client/portfolio` | محفظة العميل | ✅ |
+| `GET /api/v1/client/transactions` | معاملات العميل | ✅ |
+| `GET /api/v1/notifications` | إشعارات المشرف | ✅ |
+| `GET /api/v1/overview` | ملخص لوحة التحكم | ✅ |
+| `GET /api/v1/audit-logs` | سجل التدقيق | ✅ |
+
+### ❌ Endpoints الناقصة
+
+| Endpoint | الأهمية | النوع |
+|----------|---------|-------|
+| **`POST /api/v1/messages/:id/reply`** | 🔴 عالية جدًا | الرد على رسائل التواصل |
+| **`GET /api/v1/client/messages`** | 🔴 عالية | رسائل العميل + الردود |
+| **`GET /api/v1/market/prices`** | 🔴 عالية | أسعار حية من TwelveData |
+| **`GET /api/v1/reports/overview`** | 🟡 متوسطة | بيانات التقارير الحقيقية |
+| `POST /api/v1/auth/client/logout` | 🟡 متوسطة | تسجيل خروج |
+| `POST /api/v1/auth/forgot-password` | 🟡 متوسطة | نسيت كلمة المرور |
+| `POST /api/v1/auth/reset-password` | 🟡 متوسطة | إعادة تعيين كلمة المرور |
+
+---
+
+## قاعدة البيانات - الجداول الناقصة
 
 ```sql
--- ❌ ناقص: جدول جلسات المشرفين
-CREATE TABLE admin_sessions (
+-- 🔴 مطلوب عاجل: جدول ردود الرسائل
+CREATE TABLE message_replies (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  admin_id    UUID REFERENCES admins(id),
-  token_hash  TEXT NOT NULL,
-  ip_address  TEXT,
-  user_agent  TEXT,
-  expires_at  TIMESTAMPTZ,
+  message_id  UUID REFERENCES contact_messages(id),
+  reply_text  TEXT NOT NULL,
+  replied_by  UUID REFERENCES admins(id),
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ❌ ناقص: جدول جلسات العملاء
-CREATE TABLE client_sessions (
+-- 🟡 مطلوب: سجل أسعار الأصول
+CREATE TABLE asset_prices (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id   UUID REFERENCES clients(id),
-  token_hash  TEXT NOT NULL,
-  ip_address  TEXT,
-  user_agent  TEXT,
-  expires_at  TIMESTAMPTZ,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+  symbol      TEXT NOT NULL,
+  price       NUMERIC NOT NULL,
+  change_pct  NUMERIC,
+  currency    TEXT DEFAULT 'USD',
+  recorded_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ❌ ناقص: جدول وثائق KYC
-CREATE TABLE kyc_documents (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id    UUID REFERENCES clients(id),
-  doc_type     TEXT NOT NULL, -- national_id, passport, utility_bill
-  doc_url      TEXT NOT NULL,
-  status       TEXT DEFAULT 'pending', -- pending, approved, rejected
-  uploaded_at  TIMESTAMPTZ DEFAULT NOW(),
-  reviewed_at  TIMESTAMPTZ,
-  reviewed_by  UUID REFERENCES admins(id),
-  notes        TEXT
-);
-
--- ❌ ناقص: جدول تذاكر الدعم
+-- 🟡 مطلوب: تذاكر الدعم
 CREATE TABLE support_tickets (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id   UUID REFERENCES clients(id),
   subject     TEXT NOT NULL,
-  status      TEXT DEFAULT 'open', -- open, in_progress, closed
-  priority    TEXT DEFAULT 'normal', -- low, normal, high, urgent
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ,
-  closed_at   TIMESTAMPTZ,
-  assigned_to UUID REFERENCES admins(id)
+  status      TEXT DEFAULT 'open',
+  priority    TEXT DEFAULT 'normal',
+  created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ❌ ناقص: جدول ردود التذاكر
 CREATE TABLE ticket_replies (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_id   UUID REFERENCES support_tickets(id),
-  sender_type TEXT NOT NULL, -- client, admin
+  sender_type TEXT NOT NULL,
   sender_id   UUID NOT NULL,
   message     TEXT NOT NULL,
-  attachment  TEXT,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ❌ ناقص: جدول المشتركين في النشرة
-CREATE TABLE newsletter_subscribers (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email       TEXT UNIQUE NOT NULL,
-  name        TEXT,
-  subscribed  BOOLEAN DEFAULT TRUE,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ❌ ناقص: جدول سجل تسعير الأصول
-CREATE TABLE asset_price_history (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  symbol      TEXT NOT NULL,
-  price       NUMERIC NOT NULL,
-  currency    TEXT DEFAULT 'USD',
-  source      TEXT, -- twelvedata, manual
-  recorded_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ❌ ناقص: جدول إعدادات التكاملات
-CREATE TABLE integrations (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        TEXT UNIQUE NOT NULL,
-  service     TEXT NOT NULL, -- resend, twelvedata, twilio
-  config      JSONB DEFAULT '{}',
-  is_active   BOOLEAN DEFAULT TRUE,
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ
-);
-
--- ❌ ناقص: جدول القوالب البريدية
-CREATE TABLE email_templates (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        TEXT UNIQUE NOT NULL,
-  subject_ar  TEXT,
-  subject_en  TEXT,
-  body_ar     TEXT,
-  body_en     TEXT,
-  variables   JSONB DEFAULT '[]',
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ❌ ناقص: جدول محاولات تسجيل الدخول
-CREATE TABLE login_attempts (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email       TEXT NOT NULL,
-  ip_address  TEXT,
-  success      BOOLEAN NOT NULL,
-  user_type   TEXT, -- admin, sub_admin, client
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
 ---
 
-## 🟡 رابعاً: نقاط نهاية API الناقصة
+# 🎯 أولويات الإصلاح العاجلة
 
-### الموجودة في `api/index.js`:
+## المرحلة 1 - نظام الردود (أولوية قصوى)
+1. إنشاء جدول `message_replies`
+2. إنشاء `POST /api/v1/messages/:id/reply`
+3. تحديث `Messages.tsx` لعرض الرد
+4. إرسال بريد للعميل عند الرد
+5. تحديث `dashboard.tsx` لعرض ردود العميل
 
-✅ `GET/POST /api/v1/health`  
-✅ `POST /api/v1/auth/admin-login`  
-✅ `POST /api/v1/auth/client-login`  
-✅ `GET/POST/PATCH/DELETE /api/v1/clients`  
-✅ `GET/POST/PATCH/DELETE /api/v1/transactions`  
-✅ `GET/POST/PATCH/DELETE /api/v1/portfolios`  
-✅ `GET/POST /api/v1/settings`  
-✅ `GET/POST/PATCH/DELETE /api/v1/messages`  
-✅ `GET/POST/PATCH/DELETE /api/v1/sub-admins`  
-✅ `GET/PATCH /api/v1/notifications`  
-✅ `GET /api/v1/overview`  
-✅ `GET /api/v1/client/profile`  
-✅ `GET /api/v1/client/portfolio`  
-✅ `GET /api/v1/client/transactions`  
-✅ `GET /api/v1/auth/verify`  
-✅ `GET/POST/PATCH/DELETE /api/v1/articles`  
-✅ `GET/POST/PATCH/DELETE /api/v1/faqs`  
-✅ `GET/POST/PATCH/DELETE /api/v1/services`  
-✅ `GET/POST/PATCH/DELETE /api/v1/testimonials`  
-✅ `GET /api/v1/audit-logs`  
+## المرحلة 2 - الأسعار الحية
+1. إنشاء حساب TwelveData
+2. إنشاء `GET /api/v1/market/prices`
+3. تحديث `LiveTicker.tsx`
+4. تحديث `MarketsPreview.tsx`
+5. تحديث `dashboard.tsx` لعرض أسعار حية
 
-### الناقصة:
+## المرحلة 3 - التقارير الحقيقية
+1. حساب KPIs من قاعدة البيانات
+2. إنشاء endpoints التقارير
+3. تحديث `Reports.tsx`
 
-```javascript
-// ❌ المصادقة
-POST   /api/v1/auth/admin/logout          // تسجيل خروج المشرف
-POST   /api/v1/auth/client/logout         // تسجيل خروج العميل
-POST   /api/v1/auth/forgot-password       // نسيت كلمة المرور
-POST   /api/v1/auth/reset-password        // إعادة تعيين كلمة المرور
-POST   /api/v1/auth/change-password      // تغيير كلمة المرور
-POST   /api/v1/auth/verify-2fa           // التحقق بخطوتين
-
-// ❌ الجلسات
-GET    /api/v1/admin/sessions            // قائمة الجلسات النشطة
-DELETE /api/v1/admin/sessions/:id        // إنهاء جلسة
-
-// ❌ تذاكر الدعم
-GET    /api/v1/tickets                   // قائمة التذاكر (للمشرف)
-POST   /api/v1/tickets                   // إنشاء تذكرة (للعميل)
-GET    /api/v1/tickets/:id               // تفاصيل تذكرة
-POST   /api/v1/tickets/:id/reply         // رد على تذكرة
-PATCH  /api/v1/tickets/:id/status        // تغيير حالة التذكرة
-
-// ❌ وثائق KYC
-GET    /api/v1/kyc/:clientId             // وثائق عميل
-POST   /api/v1/kyc/:clientId             // رفع وثيقة
-PATCH  /api/v1/kyc/:documentId/status    // الموافقة/الرفض
-
-// ❌ النشرة البريدية
-GET    /api/v1/newsletter/subscribers    // قائمة المشتركين
-POST   /api/v1/newsletter/subscribe      // اشتراك جديد
-POST   /api/v1/newsletter/unsubscribe    // إلغاء اشتراك
-POST   /api/v1/newsletter/send           // إرسال نشرة
-
-// ❌ التقارير
-GET    /api/v1/reports/overview          // ملخص شامل
-GET    /api/v1/reports/aum-chart         // بيانات رسم AUM
-GET    /api/v1/reports/revenue-chart     // بيانات رسم Revenue
-GET    /api/v1/reports/clients-growth    // نمو العملاء
-GET    /api/v1/reports/export/pdf        // تصدير PDF
-GET    /api/v1/reports/export/excel      // تصدير Excel
-
-// ❌ أسعار السوق
-GET    /api/v1/market/prices             // أسعار حية
-GET    /api/v1/market/ticker             // شريط الأسعار
-POST   /api/v1/market/refresh            // تحديث الأسعار
-
-// ❌ إدارة الملفات
-POST   /api/v1/upload/image             // رفع صورة
-POST   /api/v1/upload/document          // رفع مستند
-DELETE /api/v1/upload/:fileId           // حذف ملف
-
-// ❌ الإشعارات المتقدمة
-GET    /api/v1/notifications/settings   // إعدادات الإشعارات
-POST   /api/v1/notifications/settings   // تحديث الإعدادات
-POST   /api/v1/notifications/test       // إرسال إشعار تجريبي
-
-// ❌ التكاملات
-GET    /api/v1/integrations              // قائمة التكاملات
-PATCH  /api/v1/integrations/:id          // تحديث تكامل
-POST   /api/v1/integrations/:id/test     // اختبار تكامل
-```
+## المرحلة 4 - التكامل المفقود
+1. ربط `about.tsx` بـ site_settings
+2. ربط `service.$id.tsx` بـ site_settings
 
 ---
 
-## 🔴 خامساً: ثغرات أمنية حرجة
-
-| الثغرة | الخطورة | الملف | الحل |
-|--------|---------|-------|------|
-| CORS مفتوح | 🔴 عالية | `api/index.js:13` | تعيين `ALLOWED_ORIGIN` في Vercel |
-| JWT في localStorage | 🔴 عالية | `src/lib/auth.ts` | استخدام httpOnly cookies |
-| لا rate limiting | 🔴 عالية | Backend | إضافة Upstash Redis + rate limiter |
-| صلاحيات غير محققة | 🟡 متوسطة | Backend | فحص permissions[] في كل endpoint |
-| كلمات مرور ضعيفة | 🟡 متوسطة | Frontend | سياسة كلمات مرور قوية |
-| لا 2FA | 🟡 متوسطة | - | إضافة تحقق بخطوتين |
-| Sessions غير محفوظة | 🟡 متوسطة | - | إنشاء جدول sessions |
-
----
-
-## 🟡 سادساً: الخدمات الخارجية غير المفعلة
-
-| الخدمة | الحالة | المطلوب |
-|--------|--------|---------|
-| **Resend (البريد)** | ❌ غير مفعّل | إعداد حساب + قوالب بريد |
-| **TwelveData (الأسواق)** | ❌ غير مفعّل | API key + تحديث الأسعار |
-| **Twilio/WhatsApp** | ❌ غير مفعّل | إشعارات SMS/WhatsApp |
-| **Supabase Storage** | ⚠️ غير مستخدم | رفع وثائق KYC + صور |
-| **تحديث الأسعار التلقائي** | ❌ غير موجود | Cron job لتحديث الأسعار |
-
----
-
-## 🟢 سابعاً: قائمة المراجعة للإنتاج
-
-### ✅ المكتمل
-
-- [x] تصميم الواجهة الأمامية
-- [x] تصميم لوحة الإدارة
-- [x] API أساسي للمصادقة
-- [x] CRUD للعملاء
-- [x] CRUD للمعاملات
-- [x] CRUD للمحافظ
-- [x] CMS للإعدادات
-- [x] جدول audit_logs
-
-### ⚠️ المطلوب إصلاحه
-
-- [ ] Security.tsx - ربط بـ API
-- [ ] Reports.tsx - بيانات حقيقية
-- [ ] Team.tsx - ربط بـ API
-- [ ] Messages.tsx - تبويب المراسلات
-- [ ] Overview.tsx - رسوم بيانية
-- [ ] Notifications.tsx - حفظ الإعدادات
-
-### ❌ المطلوب إنشاؤه
-
-#### واجهة العميل
-- [ ] صفحة الإشعارات
-- [ ] صفحة الدعم والتذاكر
-- [ ] صفحة التقارير الشهرية
-- [ ] صفحة KYC
-- [ ] صفحة الإعدادات
-
-#### واجهة الإدارة
-- [ ] صفحة التقارير المتقدمة
-- [ ] صفحة سجل التدقيق (واجهة)
-- [ ] صفحة النشرة البريدية
-- [ ] صفحة التكاملات
-
-#### قاعدة البيانات
-- [ ] جدول sessions
-- [ ] جدول kyc_documents
-- [ ] جدول support_tickets
-- [ ] جدول ticket_replies
-- [ ] جدول newsletter_subscribers
-- [ ] جدول asset_price_history
-- [ ] جدول integrations
-- [ ] جدول email_templates
-- [ ] جدول login_attempts
-
-#### API Endpoints
-- [ ] جميع endpoints المذكورة أعلاه
-
-#### الخدمات الخارجية
-- [ ] تفعيل Resend
-- [ ] تفعيل TwelveData
-- [ ] تفعيل Twilio/WhatsApp
-- [ ] إعداد Cron لتحديث الأسعار
-
-#### الأمان
-- [ ] httpOnly cookies للـ JWT
-- [ ] Rate limiting
-- [ ] 2FA للمشرفين
-- [ ] تحقق من صلاحيات精细化
-- [ ] سياسة كلمات مرور قوية
-
----
-
-## 📈 تقدير الجهد المطلوب
-
-| المهمة | التقدير |
-|--------|---------|
-| إصلاح الصفحات الوهمية | 3-5 أيام |
-| إنشاء الصفحات الناقصة | 5-7 أيام |
-| إضافة الجداول الناقصة | 2-3 أيام |
-| إضافة API endpoints | 5-7 أيام |
-| تفعيل الخدمات الخارجية | 2-3 أيام |
-| إصلاح الثغرات الأمنية | 3-4 أيام |
-| الاختبار والتكامل | 3-5 أيام |
-
-**إجمالي تقديري:** 23-34 يوم عمل (لمطور واحد)
-
----
-
-## 🎯 أولويات التنفيذ
-
-### المرحلة 1 - الأمان (عاجل)
-1. إصلاح CORS
-2. نقل JWT إلى httpOnly cookies
-3. إضافة rate limiting
-
-### المرحلة 2 - الوظائف الأساسية
-1. إصلاح Security.tsx
-2. إصلاح Reports.tsx
-3. إصلاح Team.tsx
-4. إصلاح Notifications.tsx
-
-### المرحلة 3 - واجهة العميل
-1. صفحة الإشعارات
-2. صفحة الدعم
-3. صفحة KYC
-4. صفحة الإعدادات
-
-### المرحلة 4 - الخدمات الخارجية
-1. تفعيل Resend
-2. تفعيل TwelveData
-3. تحديث الأسعار التلقائي
-
-### المرحلة 5 - التلميع
-1. Testing شامل
-2. تحسين الأداء
-3. التوثيق النهائي
-
----
-
-## 📝 ملاحظات ختامية
-
-- المشروع في حالة "نموذج أولي" متقدم - الواجهة مكتملة بصريًا لكن الوظائف ناقصة
-- الثغرات الأمنية يجب معالجتها فورًا قبل أي نشر إنتاجي
-- تقديرات الوقت لمطور متمرس
-
-**تحذير:** لا تنشر هذا المشروع على الإنتاج قبل معالجة الثغرات الأمنية المذكورة.
-
----
-
-*تم إعداد هذه الوثيقة بناءً على تحليل كامل للمستودع في 7 يوليو 2026*
+*تم إعداد هذه الوثيقة الشاملة في 7 يوليو 2026*
