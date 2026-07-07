@@ -126,6 +126,15 @@ export const updateMessageStatus = (id: number, status: string) =>
 export const deleteMessage = (id: number) =>
   request<{ success: boolean }>(`/messages?id=${id}`, { method: 'DELETE' })
 
+export const getMessageReplies = (messageId: number) =>
+  request<{ replies: MessageReply[] }>(`/messages/${messageId}/reply`)
+
+export const sendMessageReply = (messageId: number, replyText: string) =>
+  request<{ reply: MessageReply }>(`/messages/${messageId}/reply`, { method: 'POST', body: JSON.stringify({ reply_text: replyText }) })
+
+export const getMyMessages = () =>
+  request<{ messages: ContactMessageWithReplies[] }>('/client/messages', {}, true)
+
 // ─── Sub-Admins ───────────────────────────────────────────────────────────────
 export const getSubAdmins = () =>
   request<{ subAdmins: SubAdmin[] }>('/sub-admins')
@@ -191,6 +200,14 @@ export interface ClientProfile {
 export interface ContactMessage {
   id: number; name: string; email: string; phone?: string; service?: string
   message: string; source: string; status: 'new' | 'read' | 'replied'; created_at: string
+}
+
+export interface MessageReply {
+  id: number; message_id: number; admin_id?: string; admin_name: string; reply_text: string; created_at: string
+}
+
+export interface ContactMessageWithReplies extends ContactMessage {
+  replies: MessageReply[]
 }
 
 export interface ContactMessageInput {
