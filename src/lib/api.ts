@@ -13,6 +13,12 @@ function authHeaders(useClientToken = false): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+// Returns the raw `Bearer <token>` string, or null when no token is present.
+export function getAuthHeader(useClientToken = false): string | null {
+  const token = useClientToken ? getClientToken() : (getAdminToken() || getClientToken())
+  return token ? `Bearer ${token}` : null
+}
+
 async function request<T>(path: string, options: RequestInit = {}, useClientToken = false): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...options,
