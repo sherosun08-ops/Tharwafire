@@ -223,18 +223,31 @@ ALTER TABLE notifications    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs       ENABLE ROW LEVEL SECURITY;
 
 -- Service role bypasses RLS
-CREATE POLICY IF NOT EXISTS "service_role_all_admins"      ON admins           FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "service_role_all_sub"         ON sub_admins       FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "service_role_all_clients"     ON clients          FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "service_role_all_portfolios"  ON portfolios       FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "service_role_all_tx"          ON transactions     FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "service_role_all_messages"    ON contact_messages FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "service_role_all_settings"    ON site_settings    FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "service_role_all_articles"    ON articles         FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "service_role_all_notifs"      ON notifications    FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "service_role_all_audit"       ON audit_logs       FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_all_admins"     ON admins;
+CREATE POLICY "service_role_all_admins"      ON admins           FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_all_sub"        ON sub_admins;
+CREATE POLICY "service_role_all_sub"         ON sub_admins       FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_all_clients"    ON clients;
+CREATE POLICY "service_role_all_clients"     ON clients          FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_all_portfolios" ON portfolios;
+CREATE POLICY "service_role_all_portfolios"  ON portfolios       FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_all_tx"         ON transactions;
+CREATE POLICY "service_role_all_tx"          ON transactions     FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_all_messages"   ON contact_messages;
+CREATE POLICY "service_role_all_messages"    ON contact_messages FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_all_settings"   ON site_settings;
+CREATE POLICY "service_role_all_settings"    ON site_settings    FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_all_articles"   ON articles;
+CREATE POLICY "service_role_all_articles"    ON articles         FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_all_notifs"     ON notifications;
+CREATE POLICY "service_role_all_notifs"      ON notifications    FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "service_role_all_audit"      ON audit_logs;
+CREATE POLICY "service_role_all_audit"       ON audit_logs       FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- Public read
-CREATE POLICY IF NOT EXISTS "anon_read_settings"   ON site_settings    FOR SELECT TO anon USING (true);
-CREATE POLICY IF NOT EXISTS "anon_read_articles"   ON articles         FOR SELECT TO anon USING (status = 'published');
-CREATE POLICY IF NOT EXISTS "anon_insert_messages" ON contact_messages FOR INSERT TO anon WITH CHECK (true);
+DROP POLICY IF EXISTS "anon_read_settings"   ON site_settings;
+CREATE POLICY "anon_read_settings"   ON site_settings    FOR SELECT TO anon USING (true);
+DROP POLICY IF EXISTS "anon_read_articles"   ON articles;
+CREATE POLICY "anon_read_articles"   ON articles         FOR SELECT TO anon USING (status = 'published');
+DROP POLICY IF EXISTS "anon_insert_messages" ON contact_messages;
+CREATE POLICY "anon_insert_messages" ON contact_messages FOR INSERT TO anon WITH CHECK (true);
