@@ -57,7 +57,7 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
 -- ============================================================
 -- SAMPLE NOTIFICATIONS
 -- ============================================================
-INSERT INTO notifications (title, message, type, read, target) VALUES
+INSERT INTO notifications (title, message, type, is_read, target) VALUES
   ('عميل جديد بانتظار الموافقة',  '3 طلبات تسجيل جديدة تحتاج مراجعة', 'warning', false, 'admin'),
   ('رسائل غير مقروءة',           'لديك 7 رسائل جديدة من العملاء',      'info',    false, 'admin'),
   ('تم إكمال صفقة ناجحة',        'صفقة شراء أرامكو بقيمة $12,400',    'success', true,  'admin')
