@@ -365,3 +365,26 @@ export const submitContactMessage = (data: {
     method: 'POST',
     body: JSON.stringify(data),
   })
+
+// ─── Auth Verify ───────────────────────────────────────────────────────────────
+export const verifyAdminSession = () =>
+  request<{ valid: boolean; user?: AdminUser }>('/auth/verify')
+
+// ─── Articles (alias for getNews) ─────────────────────────────────────────────
+export const getArticles = (params?: { limit?: number; category?: string }) => {
+  const q = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : ''
+  return request<{ articles: Article[]; total?: number }>(`/articles${q}`)
+}
+
+// ─── Contact Message type + updateMessageStatus ────────────────────────────────
+export interface ContactMessage {
+  id: number; name: string; email?: string; phone?: string
+  message?: string; status: 'new' | 'read' | 'replied'
+  reply?: string; service?: string; source?: string; created_at?: string
+}
+
+export const updateMessageStatus = (id: number | string, status: string) =>
+  request<{ message: Message }>('/messages', {
+    method: 'PATCH',
+    body: JSON.stringify({ id: String(id), status }),
+  })
