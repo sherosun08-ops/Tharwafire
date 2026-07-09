@@ -13,6 +13,12 @@ function authHeaders(useClientToken = false): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+// Exported helper used by components that build their own fetch calls
+export function getAuthHeader(): string | null {
+  const token = getAdminToken() || getClientToken()
+  return token ? `Bearer ${token}` : null
+}
+
 async function request<T>(path: string, options: RequestInit = {}, useClientToken = false): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...options,
@@ -92,201 +98,215 @@ export const getPortfolios = (client_id?: string) => {
 export const getPortfolio = (id: string) =>
   request<{ portfolio: Portfolio }>(`/portfolios?id=${id}`)
 
-export const createPortfolio = (data: Partial<Portfolio> & { portfolio_data?: Record<string, unknown> }) =>
+export const createPortfolio = (data: Partial<Portfolio>) =>
   request<{ portfolio: Portfolio }>('/portfolios', { method: 'POST', body: JSON.stringify(data) })
 
-export const updatePortfolio = (id: string, data: Partial<Portfolio> & { portfolio_data?: Record<string, unknown> }) =>
+export const updatePortfolio = (id: string, data: Partial<Portfolio>) =>
   request<{ portfolio: Portfolio }>('/portfolios', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
 
 export const deletePortfolio = (id: string) =>
   request<{ success: boolean }>(`/portfolios?id=${id}`, { method: 'DELETE' })
 
-// ─── Client Portal ─────────────────────────────────────────────────────────────
-export const getMyProfile = () =>
-  request<{ client: ClientProfile }>('/client/profile', {}, true)
-
-export const getMyPortfolio = () =>
-  request<{ portfolio: Portfolio | null }>('/client/portfolio', {}, true)
-
-export const getMyTransactions = (limit = 20) =>
-  request<{ transactions: ClientTransaction[] }>(`/client/transactions?limit=${limit}`, {}, true)
-
 // ─── Messages ─────────────────────────────────────────────────────────────────
-export const submitContactMessage = (data: ContactMessageInput) =>
-  request<{ success: boolean; id: number }>('/messages', { method: 'POST', body: JSON.stringify(data) })
-
-export const getMessages = (status?: string) => {
-  const q = status && status !== 'all' ? `?status=${status}` : ''
-  return request<{ messages: ContactMessage[] }>(`/messages${q}`)
+export const getMessages = (params?: { status?: string; search?: string }) => {
+  const q = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : ''
+  return request<{ messages: Message[] }>(`/messages${q}`)
 }
 
-export const updateMessageStatus = (id: number, status: string) =>
-  request<{ message: ContactMessage }>('/messages', { method: 'PATCH', body: JSON.stringify({ id, status }) })
+export const getMessage = (id: string) =>
+  request<{ message: Message }>(`/messages?id=${id}`)
 
-export const deleteMessage = (id: number) =>
+export const updateMessage = (id: string, data: Partial<Message>) =>
+  request<{ message: Message }>('/messages', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
+
+export const deleteMessage = (id: string) =>
   request<{ success: boolean }>(`/messages?id=${id}`, { method: 'DELETE' })
 
-export const getMessageReplies = (messageId: number) =>
-  request<{ replies: MessageReply[] }>(`/messages/${messageId}/reply`)
+export const replyToMessage = (id: string, reply: string) =>
+  request<{ success: boolean }>(`/messages/${id}/reply`, { method: 'POST', body: JSON.stringify({ reply }) })
 
-export const sendMessageReply = (messageId: number, replyText: string) =>
-  request<{ reply: MessageReply }>(`/messages/${messageId}/reply`, { method: 'POST', body: JSON.stringify({ reply_text: replyText }) })
+// ─── Contact / Public ─────────────────────────────────────────────────────────
+export const sendContactMessage = (data: { name: string; email: string; phone?: string; message: string }) =>
+  request<{ success: boolean; message?: string }>('/contact', { method: 'POST', body: JSON.stringify(data) }, true)
 
-export const getMyMessages = () =>
-  request<{ messages: ContactMessageWithReplies[] }>('/client/messages', {}, true)
-
-// ─── Sub-Admins ───────────────────────────────────────────────────────────────
-export const getSubAdmins = () =>
-  request<{ subAdmins: SubAdmin[] }>('/sub-admins')
-
-export const createSubAdmin = (data: { name: string; email: string; password: string; permissions?: string[] }) =>
-  request<{ subAdmin: SubAdmin }>('/sub-admins', { method: 'POST', body: JSON.stringify(data) })
-
-export const deleteSubAdmin = (id: string) =>
-  request<{ success: boolean }>(`/sub-admins?id=${id}`, { method: 'DELETE' })
-
-// ─── Notifications ────────────────────────────────────────────────────────────
-export const getNotifications = () =>
-  request<{ notifications: Notification[]; unread: number }>('/notifications')
-
-export const markNotificationRead = (id: string) =>
-  request<{ notification: Notification }>('/notifications', { method: 'PATCH', body: JSON.stringify({ id }) })
-
-// ─── Overview / Dashboard KPIs ────────────────────────────────────────────────
+// ─── Overview / Dashboard ─────────────────────────────────────────────────────
 export const getOverview = () =>
-  request<{ kpis: OverviewKPIs; recentTransactions: Transaction[]; recentMessages: ContactMessage[] }>('/overview')
+  request<{ kpis: OverviewKPIs; recentActivity: RecentActivity[] }>('/overview')
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-export interface AdminUser  { id: string; name: string; email: string; role: 'super' | 'sub'; permissions?: string[] }
-export interface ClientUser { id: string; name: string; email: string; account_number?: string; status?: string; membership_level?: string; portfolio_code?: string }
-
-export interface SettingRow { key: string; value: string; type: string; label: string }
-
-export interface Client {
-  id: string; name: string; email: string; phone?: string
-  account_number?: string; status: string
-  risk_profile?: string; notes?: string
-  membership_level?: string; portfolio_code?: string; initial_investment?: string
-  join_date?: string; created_at: string; updated_at?: string
-  avatar_url?: string
-}
-
-export interface Transaction {
-  id: string; client_id?: string; type: string; amount?: number; currency?: string
-  reference?: string; status: string; notes?: string; created_at: string
-  clients?: { name: string }
-}
-
-export interface ClientTransaction {
-  id: string; type: string; amount?: number; currency?: string
-  reference?: string; notes?: string; status: string; created_at: string
-}
-
-export interface Portfolio {
-  id: string; client_id: string; name: string; type?: string
-  initial_value?: number; current_value?: number
-  currency?: string; notes?: string; created_at: string; updated_at?: string
-  portfolio_data?: Record<string, unknown>
-  clients?: { name: string; email: string; membership_level?: string }
-}
-
-export interface ClientProfile {
-  id: string; name: string; email: string; phone?: string
-  status?: string; account_number?: string; join_date?: string
-  risk_profile?: string; membership_level?: string; portfolio_code?: string
-  initial_investment?: string; avatar_url?: string
-}
-
-export interface ContactMessage {
-  id: number; name: string; email: string; phone?: string; service?: string
-  message: string; source: string; status: 'new' | 'read' | 'replied'; created_at: string
-}
-
-export interface MessageReply {
-  id: number; message_id: number; admin_id?: string; admin_name: string; reply_text: string; created_at: string
-}
-
-export interface ContactMessageWithReplies extends ContactMessage {
-  replies: MessageReply[]
-}
-
-export interface ContactMessageInput {
-  name: string; email: string; phone?: string; service?: string; message: string; source?: string
-}
-
-export interface SubAdmin {
-  id: string; name: string; email: string; status: string; permissions?: string[]; created_at: string
-}
-
-export interface OverviewKPIs {
-  totalClients: number; pendingClients: number; todayTransactions: number
-  pendingTransactions: number; newMessages: number
-}
-
-export const updateSubAdmin = (id: string, data: { name?: string; email?: string; password?: string; permissions?: string[] }) =>
-  request<{ subAdmin: SubAdmin }>('\/sub-admins', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
-
-export const verifyAdminSession = () =>
-  request<{ valid: boolean; user: { id: string; role: string } }>('\/auth\/verify')
-
-// ─── Articles ─────────────────────────────────────────────────────────────────
-export const getArticles = (params?: { status?: string; limit?: number }) => {
+// ─── News / Articles ──────────────────────────────────────────────────────────
+export const getNews = (params?: { limit?: number; category?: string }) => {
   const q = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : ''
-  return request<{ articles: Article[]; total: number }>(`/articles${q}`)
+  return request<{ articles: Article[] }>(`/news${q}`)
 }
-export const createArticle = (data: Partial<Article>) =>
-  request<{ article: Article }>('/articles', { method: 'POST', body: JSON.stringify(data) })
-export const updateArticle = (id: string, data: Partial<Article>) =>
-  request<{ article: Article }>('/articles', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
-export const deleteArticle = (id: string) =>
-  request<{ success: boolean }>(`/articles?id=${id}`, { method: 'DELETE' })
 
-// ─── FAQs ─────────────────────────────────────────────────────────────────────
-export const getFAQs = () =>
-  request<{ items: FAQ[] }>('/faqs')
-export const createFAQ = (data: Partial<FAQ>) =>
-  request<{ item: FAQ }>('/faqs', { method: 'POST', body: JSON.stringify(data) })
-export const updateFAQ = (id: number, data: Partial<FAQ>) =>
-  request<{ item: FAQ }>('/faqs', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
-export const deleteFAQ = (id: number) =>
-  request<{ success: boolean }>(`/faqs?id=${id}`, { method: 'DELETE' })
+export const getArticle = (slug: string) =>
+  request<{ article: Article }>(`/news?slug=${slug}`)
+
+export const createArticle = (data: Partial<Article>) =>
+  request<{ article: Article }>('/news', { method: 'POST', body: JSON.stringify(data) })
+
+export const updateArticle = (id: string, data: Partial<Article>) =>
+  request<{ article: Article }>('/news', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
+
+export const deleteArticle = (id: string) =>
+  request<{ success: boolean }>(`/news?id=${id}`, { method: 'DELETE' })
+
+// ─── Markets ──────────────────────────────────────────────────────────────────
+export const getMarkets = () =>
+  request<{ markets: Market[] }>('/markets')
+
+export const updateMarket = (id: string, data: Partial<Market>) =>
+  request<{ market: Market }>('/markets', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
 
 // ─── Services ─────────────────────────────────────────────────────────────────
 export const getServices = () =>
-  request<{ items: Service[] }>('/services')
+  request<{ services: Service[] }>('/services')
+
 export const createService = (data: Partial<Service>) =>
-  request<{ item: Service }>('/services', { method: 'POST', body: JSON.stringify(data) })
-export const updateService = (id: number, data: Partial<Service>) =>
-  request<{ item: Service }>('/services', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
-export const deleteService = (id: number) =>
+  request<{ service: Service }>('/services', { method: 'POST', body: JSON.stringify(data) })
+
+export const updateService = (id: string, data: Partial<Service>) =>
+  request<{ service: Service }>('/services', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
+
+export const deleteService = (id: string) =>
   request<{ success: boolean }>(`/services?id=${id}`, { method: 'DELETE' })
 
 // ─── Testimonials ─────────────────────────────────────────────────────────────
 export const getTestimonials = () =>
-  request<{ items: Testimonial[] }>('/testimonials')
+  request<{ testimonials: Testimonial[] }>('/testimonials')
+
 export const createTestimonial = (data: Partial<Testimonial>) =>
-  request<{ item: Testimonial }>('/testimonials', { method: 'POST', body: JSON.stringify(data) })
-export const updateTestimonial = (id: number, data: Partial<Testimonial>) =>
-  request<{ item: Testimonial }>('/testimonials', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
-export const deleteTestimonial = (id: number) =>
+  request<{ testimonial: Testimonial }>('/testimonials', { method: 'POST', body: JSON.stringify(data) })
+
+export const updateTestimonial = (id: string, data: Partial<Testimonial>) =>
+  request<{ testimonial: Testimonial }>('/testimonials', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
+
+export const deleteTestimonial = (id: string) =>
   request<{ success: boolean }>(`/testimonials?id=${id}`, { method: 'DELETE' })
 
+// ─── FAQs ─────────────────────────────────────────────────────────────────────
+export const getFAQs = () =>
+  request<{ faqs: FAQ[] }>('/faqs')
+
+export const createFAQ = (data: Partial<FAQ>) =>
+  request<{ faq: FAQ }>('/faqs', { method: 'POST', body: JSON.stringify(data) })
+
+export const updateFAQ = (id: string, data: Partial<FAQ>) =>
+  request<{ faq: FAQ }>('/faqs', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
+
+export const deleteFAQ = (id: string) =>
+  request<{ success: boolean }>(`/faqs?id=${id}`, { method: 'DELETE' })
+
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
-export const getAuditLogs = (params?: { limit?: number }) => {
-  const q = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : ''
-  return request<{ logs: AuditLog[] }>(`/audit-logs${q}`)
+export const getAuditLogs = () =>
+  request<{ logs: AuditLog[] }>('/audit-logs')
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+export const getNotifications = () =>
+  request<{ notifications: Notification[] }>('/notifications')
+
+export const markNotificationRead = (id: string) =>
+  request<{ success: boolean }>(`/notifications?id=${id}`, { method: 'PATCH' })
+
+// ─── Team ─────────────────────────────────────────────────────────────────────
+export const getTeam = () =>
+  request<{ team: TeamMember[] }>('/team')
+
+export const createTeamMember = (data: Partial<TeamMember>) =>
+  request<{ member: TeamMember }>('/team', { method: 'POST', body: JSON.stringify(data) })
+
+export const updateTeamMember = (id: string, data: Partial<TeamMember>) =>
+  request<{ member: TeamMember }>('/team', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
+
+export const deleteTeamMember = (id: string) =>
+  request<{ success: boolean }>(`/team?id=${id}`, { method: 'DELETE' })
+
+// ─── Sub Admins ───────────────────────────────────────────────────────────────
+export const getSubAdmins = () =>
+  request<{ admins: SubAdmin[] }>('/sub-admins')
+
+export const createSubAdmin = (data: Partial<SubAdmin> & { password: string }) =>
+  request<{ admin: SubAdmin }>('/sub-admins', { method: 'POST', body: JSON.stringify(data) })
+
+export const updateSubAdmin = (id: string, data: Partial<SubAdmin>) =>
+  request<{ admin: SubAdmin }>('/sub-admins', { method: 'PATCH', body: JSON.stringify({ id, ...data }) })
+
+export const deleteSubAdmin = (id: string) =>
+  request<{ success: boolean }>(`/sub-admins?id=${id}`, { method: 'DELETE' })
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+export interface AdminUser {
+  id: string; email: string; name?: string; role?: string
 }
 
-// ─── Additional Types ─────────────────────────────────────────────────────────
+export interface ClientUser {
+  id: string; email: string; name?: string; token?: string
+}
+
+export interface SettingRow {
+  key: string; value: string
+}
+
+export interface Client {
+  id: string; name: string; email?: string; phone?: string
+  status?: string; portfolio_code?: string
+  initial_investment?: string; created_at?: string
+}
+
+export interface Transaction {
+  id: string; type: string; amount: number
+  status?: string; description?: string
+  created_at?: string; client_id?: string
+  clients?: { name: string }
+}
+
+export interface Portfolio {
+  id: string; client_id?: string; code?: string
+  value?: number; currency?: string; created_at?: string
+  clients?: { name: string }
+}
+
+export interface Message {
+  id: string; name: string; email?: string; phone?: string
+  message?: string; status?: string; reply?: string
+  created_at?: string
+}
+
+export interface OverviewKPIs {
+  totalClients: number; activeClients: number
+  netAssets: number; totalDeposits: number
+  totalWithdrawals: number; totalTransactions: number
+  pendingTransactions: number
+}
+
+export interface RecentActivity {
+  type: string; description: string; created_at: string
+}
+
 export interface Article {
-  id: string; title: string; body?: string; category?: string
-  status: 'published' | 'draft'; author?: string
-  created_at: string; updated_at?: string
+  id: string; slug?: string; title: string
+  category?: string; summary?: string; content?: string
+  image_url?: string; published: boolean
+  published_at?: string; created_at?: string
+}
+
+export interface Market {
+  id: string; symbol: string; name?: string
+  price?: number; change?: number; currency?: string; visible: boolean
 }
 
 export interface FAQ {
-  id: number; question: string; answer: string
-  categoryId?: number; order: number; visible: boolean
+  id: string; question: string; answer: string; order: number; visible: boolean
+}
+
+export interface TeamMember {
+  id: string; name: string; role?: string; bio?: string
+  image_url?: string; order: number; visible: boolean
+}
+
+export interface SubAdmin {
+  id: string; email: string; name?: string; role?: string
+  permissions?: Record<string, boolean>; created_at?: string
 }
 
 export interface Service {
