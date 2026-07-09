@@ -331,3 +331,37 @@ export interface Notification {
   id: string; type?: string; title?: string; message?: string
   is_read: boolean; created_at: string
 }
+
+// ─── Client Portal ─────────────────────────────────────────────────────────────
+export interface ClientProfile {
+  id: string; name: string; email?: string; phone?: string
+  status?: string; national_id?: string; address?: string
+  created_at?: string; [key: string]: unknown
+}
+
+export interface ClientTransaction {
+  id: string; client_id?: string; type?: string
+  amount?: number; currency?: string; status?: string
+  description?: string; reference?: string; created_at?: string
+  [key: string]: unknown
+}
+
+export const getMyProfile = () =>
+  request<{ client: ClientProfile }>('/client/profile', {}, true)
+
+export const getMyPortfolio = () =>
+  request<{ portfolio: Portfolio }>('/client/portfolio', {}, true)
+
+export const getMyTransactions = (limit?: number) => {
+  const q = limit ? `?limit=${limit}` : ''
+  return request<{ transactions: ClientTransaction[] }>(`/client/transactions${q}`, {}, true)
+}
+
+export const submitContactMessage = (data: {
+  name: string; email: string; phone?: string
+  service?: string; message: string; source?: string
+}) =>
+  request<{ success: boolean; message?: string }>('/messages', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
