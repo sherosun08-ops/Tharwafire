@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { TrendingUp, Globe, Bitcoin, Building2, Gem, Fuel, CheckCircle, ArrowLeft, ArrowRight } from "lucide-react";
 import { useLang } from "../contexts/LanguageContext";
 
@@ -39,7 +40,30 @@ const howEn = [
 function Services() {
   const { t, lang } = useLang();
   const isAr = lang === 'ar';
-  const services = isAr ? servicesAr : servicesEn;
+  const [apiServices, setApiServices] = useState<typeof servicesAr | null>(null);
+  useEffect(() => {
+    fetch('/api/v1/services')
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d.items) && d.items.length > 0) {
+          setApiServices(d.items.map((x: Record<string, unknown>) => {
+            const iconKey = String(x.icon || 'TrendingUp');
+            const iconMap: Record<string, typeof TrendingUp> = { TrendingUp, Globe, Bitcoin, Building2, Gem, Fuel };
+            return {
+              id: String(x.id || x.slug || ''),
+              icon: iconMap[iconKey] || TrendingUp,
+              emoji: String(x.emoji || '📈'),
+              title: isAr ? String(x.title || '') : String((x as Record<string,unknown>).title_en || x.title || ''),
+              desc: isAr ? String(x.desc || '') : String((x as Record<string,unknown>).desc_en || x.desc || ''),
+              features: Array.isArray(x.features) ? x.features.map(String) : [],
+              returns: String(x.returns || ''),
+            };
+          }));
+        }
+      })
+      .catch(() => {});
+  }, [isAr]);
+  const services = apiServices ?? (isAr ? servicesAr : servicesEn);
   const howItWorks = isAr ? howAr : howEn;
   const Arrow = isAr ? ArrowLeft : ArrowRight;
 

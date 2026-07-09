@@ -388,3 +388,30 @@ export const updateMessageStatus = (id: number | string, status: string) =>
     method: 'PATCH',
     body: JSON.stringify({ id: String(id), status }),
   })
+
+// ─── Public Content API (no auth required) ────────────────────────────────────
+async function publicRequest<T>(path: string): Promise<T> {
+  const res = await fetch(`/api/v1${path}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json() as Promise<T>
+}
+
+export const getPublicFaqs = () =>
+  publicRequest<{ items: Record<string, unknown>[] }>('/faqs')
+
+export const getPublicServices = () =>
+  publicRequest<{ items: Record<string, unknown>[] }>('/services')
+
+export const getPublicTestimonials = () =>
+  publicRequest<{ items: Record<string, unknown>[] }>('/testimonials')
+
+export const getPublicArticles = (params?: { limit?: number; category?: string; status?: string }) => {
+  const q = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : ''
+  return publicRequest<{ articles: Record<string, unknown>[]; total?: number }>(`/articles${q}`)
+}
+
+export const getPublicMarkets = () =>
+  publicRequest<{ items: Record<string, unknown>[] }>('/markets')
+
+export const getPublicTeam = () =>
+  publicRequest<{ items: Record<string, unknown>[] }>('/team')

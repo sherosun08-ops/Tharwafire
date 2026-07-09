@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Star, ChevronRight, ChevronLeft } from "lucide-react";
 import { useLang } from "../../contexts/LanguageContext";
 
@@ -16,13 +16,47 @@ const itemsEn = [
   { name: "Noura Al-Zahrani", role: "Finance Manager — Jeddah", text: "Premium customer service and a deep understanding of Gulf and global markets. I felt secure from day one." },
 ];
 
+interface TestimonialItem {
+  id?: string | number;
+  name?: string;
+  name_en?: string;
+  role?: string;
+  role_en?: string;
+  text?: string;
+  text_en?: string;
+  [key: string]: unknown;
+}
+
 export function Testimonials() {
   const { t, lang } = useLang();
-  const items = lang === 'ar' ? itemsAr : itemsEn;
+  const isAr = lang === 'ar';
+  const staticItems = isAr ? itemsAr : itemsEn;
+
+  const [apiItems, setApiItems] = useState<TestimonialItem[] | null>(null);
+
+  useEffect(() => {
+    fetch('/api/v1/testimonials')
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d.items) && d.items.length > 0) setApiItems(d.items);
+      })
+      .catch(() => {});
+  }, []);
+
+  const items = apiItems && apiItems.length > 0
+    ? apiItems.map(x => ({
+        name: isAr ? (x.name || '') : (x.name_en || x.name || ''),
+        role: isAr ? (x.role || '') : (x.role_en || x.role || ''),
+        text: isAr ? (x.text || '') : (x.text_en || x.text || ''),
+      }))
+    : staticItems;
+
   const [i, setI] = useState(0);
   const prev = () => setI((p) => (p - 1 + items.length) % items.length);
   const next = () => setI((p) => (p + 1) % items.length);
-  const item = items[i];
+  const item = items[Math.min(i, items.length - 1)];
+
+  if (!item) return null;
 
   return (
     <section className="py-24 lg:py-32">

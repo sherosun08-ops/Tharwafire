@@ -100,7 +100,7 @@ export function SiteHeader() {
     <header
       className={`fixed inset-x-0 top-0 z-50 h-[72px] border-b backdrop-blur-xl transition-all duration-400 ${
         scrolled ? "border-gold/30 bg-white/95 shadow-card" : "border-border/60 bg-white/80"
-      } ${hidden ? "-translate-y-full" : "translate-y-0"}`}
+      } ${hidden ? "-translate-y-full pointer-events-none" : "translate-y-0 pointer-events-auto"}`}
     >
       <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-4 px-5 lg:px-8">
         {/* Logo */}

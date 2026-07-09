@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import { useLang } from "../contexts/LanguageContext";
 
@@ -38,7 +38,24 @@ const faqsEn = [
 function Faq() {
   const { t, lang } = useLang();
   const isAr = lang === 'ar';
-  const faqs = isAr ? faqsAr : faqsEn;
+
+  const [apiFaqs, setApiFaqs] = useState<typeof faqsAr | null>(null);
+  useEffect(() => {
+    fetch('/api/v1/faqs')
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d.items) && d.items.length > 0) {
+          setApiFaqs(d.items.map((x: Record<string,string>) => ({
+            cat: isAr ? (x.cat || x.category || '') : (x.cat_en || x.category_en || x.cat || x.category || ''),
+            q: isAr ? (x.q || x.question || '') : (x.q_en || x.question_en || x.q || x.question || ''),
+            a: isAr ? (x.a || x.answer || '') : (x.a_en || x.answer_en || x.a || x.answer || ''),
+          })));
+        }
+      })
+      .catch(() => {});
+  }, [isAr]);
+
+  const faqs = apiFaqs ?? (isAr ? faqsAr : faqsEn);
   const cats = [t('faq_cat_all'), ...Array.from(new Set(faqs.map((f) => f.cat)))];
 
   const [open, setOpen] = useState<number | null>(null);

@@ -23,6 +23,35 @@ import { createClient } from '@supabase/supabase-js'
     return false
   }
 
+
+  // ── Rate Limiting ─────────────────────────────────────────────
+  const _rateLimitMap = new Map()
+  function rateLimit(req, res, options = {}) {
+    const { max = 20, windowMs = 60000, keyPrefix = '' } = options
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown'
+    const key = keyPrefix ? `${keyPrefix}:${ip}` : ip
+    const now = Date.now()
+    const entry = _rateLimitMap.get(key) || { count: 0, resetAt: now + windowMs }
+    if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + windowMs }
+    entry.count++
+    _rateLimitMap.set(key, entry)
+    if (entry.count > max) {
+      res.status(429).json({ error: 'طلبات كثيرة جداً — حاول لاحقاً', retryAfter: Math.ceil((entry.resetAt - now) / 1000) })
+      return true
+    }
+    return false
+  }
+
+  // ── Security Headers ──────────────────────────────────────────
+  function addSecurityHeaders(res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN')
+    res.setHeader('X-XSS-Protection', '1; mode=block')
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains')
+  }
+
   // ── Auth helpers ──────────────────────────────────────────────
   const getSecret = () => process.env.JWT_SECRET || process.env.SUPABASE_JWT_SECRET || null
   function signToken(payload) {
@@ -79,6 +108,7 @@ import { createClient } from '@supabase/supabase-js'
 
   async function handleAdminLogin(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+    if (rateLimit(req, res, { max: 10, windowMs: 300000, keyPrefix: 'admin-login' })) return
     const { email, password } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'البريد الإلكتروني وكلمة المرور مطلوبان' })
     async function checkPassword(plain, hash) {
@@ -511,45 +541,71 @@ import { createClient } from '@supabase/supabase-js'
   }
 
   async function handleArticles(req, res) {
+    if (req.method === 'GET') {
+      try {
+        const { id, status, category, limit = 50, offset = 0 } = req.query
+        const { data: sd } = await supabase.from('site_settings').select('value').eq('key', 'articles_data').maybeSingle()
+        let all = []
+        try { all = sd ? JSON.parse(sd.value) : [] } catch { all = [] }
+        if (id) {
+          const article = all.find(a => String(a.id) === String(id))
+          if (!article) return res.status(404).json({ error: 'المقال غير موجود' })
+          return res.json({ article })
+        }
+        if (status && status !== 'all') all = all.filter(a => a.status === status)
+        if (category) all = all.filter(a => a.category === category)
+        all.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        const total = all.length
+        const articles = all.slice(Number(offset), Number(offset) + Number(limit))
+        return res.json({ articles, total })
+      } catch (e) { return res.status(500).json({ error: e.message }) }
+    }
     const decoded = requireAdmin(req, res)
     if (!decoded) return
+    const getRaw = async () => {
+      const { data } = await supabase.from('site_settings').select('value').eq('key', 'articles_data').maybeSingle()
+      try { return data ? JSON.parse(data.value) : [] } catch { return [] }
+    }
+    const saveRaw = async (arr) => {
+      await supabase.from('site_settings').upsert([{ key: 'articles_data', value: JSON.stringify(arr), updated_at: new Date().toISOString() }], { onConflict: 'key' })
+    }
     try {
-      if (req.method === 'GET') {
-        const { id, status, limit = 50, offset = 0 } = req.query
-        if (id) {
-          const { data, error } = await supabase.from('articles').select('*').eq('id', id).single()
-          if (error || !data) return res.status(404).json({ error: 'المقال غير موجود' })
-          return res.json({ article: data })
-        }
-        let q = supabase.from('articles').select('*', { count: 'exact' })
-        if (status) q = q.eq('status', status)
-        q = q.order('created_at', { ascending: false }).range(Number(offset), Number(offset) + Number(limit) - 1)
-        const { data, count, error } = await q
-        if (error) return res.status(500).json({ error: error.message })
-        return res.json({ articles: data || [], total: count })
-      }
       if (req.method === 'POST') {
         const { title, body, category, status = 'draft', author } = req.body || {}
         if (!title) return res.status(400).json({ error: 'العنوان مطلوب' })
-        const { data, error } = await supabase.from('articles').insert({ title, body, category, status, author }).select('*').single()
-        if (error) return res.status(500).json({ error: error.message })
-        return res.status(201).json({ article: data })
+        const items = await getRaw()
+        const article = { id: Date.now(), title, body, category, status, author, created_at: new Date().toISOString() }
+        items.unshift(article)
+        await saveRaw(items)
+        return res.status(201).json({ article })
       }
       if (req.method === 'PATCH') {
         const { id, ...updates } = req.body || {}
         if (!id) return res.status(400).json({ error: 'id مطلوب' })
-        const { data, error } = await supabase.from('articles').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).select('*').single()
-        if (error) return res.status(500).json({ error: error.message })
-        return res.json({ article: data })
+        const items = await getRaw()
+        const idx = items.findIndex(x => String(x.id) === String(id))
+        if (idx === -1) return res.status(404).json({ error: 'المقال غير موجود' })
+        items[idx] = { ...items[idx], ...updates, updated_at: new Date().toISOString() }
+        await saveRaw(items)
+        return res.json({ article: items[idx] })
       }
       if (req.method === 'DELETE') {
         const { id } = req.query
         if (!id) return res.status(400).json({ error: 'id مطلوب' })
-        const { error } = await supabase.from('articles').delete().eq('id', id)
-        if (error) return res.status(500).json({ error: error.message })
+        const items = await getRaw()
+        await saveRaw(items.filter(x => String(x.id) !== String(id)))
         return res.json({ success: true })
       }
       return res.status(405).json({ error: 'Method not allowed' })
+    } catch (e) { return res.status(500).json({ error: e.message }) }
+  }
+
+  async function handlePublicJsonGet(key, req, res) {
+    try {
+      const { data } = await supabase.from('site_settings').select('value').eq('key', key).maybeSingle()
+      let items = []
+      try { items = data ? JSON.parse(data.value) : [] } catch { items = [] }
+      return res.json({ items })
     } catch (e) { return res.status(500).json({ error: e.message }) }
   }
 
@@ -597,9 +653,28 @@ import { createClient } from '@supabase/supabase-js'
     } catch (e) { return res.status(500).json({ error: e.message }) }
   }
 
-  const handleFAQs         = (req, res) => handleJsonCollection('faqs_data', req, res)
-  const handleServices     = (req, res) => handleJsonCollection('services_data', req, res)
-  const handleTestimonials = (req, res) => handleJsonCollection('testimonials_data', req, res)
+  // Public GET (no auth required) + admin writes for content collections
+  const handleFAQs = (req, res) => req.method === 'GET'
+    ? handlePublicJsonGet('faqs_data', req, res)
+    : handleJsonCollection('faqs_data', req, res)
+
+  const handleServices = (req, res) => req.method === 'GET'
+    ? handlePublicJsonGet('services_data', req, res)
+    : handleJsonCollection('services_data', req, res)
+
+  const handleTestimonials = (req, res) => req.method === 'GET'
+    ? handlePublicJsonGet('testimonials_data', req, res)
+    : handleJsonCollection('testimonials_data', req, res)
+
+  // Markets handler — public GET, admin writes
+  const handleMarkets = (req, res) => req.method === 'GET'
+    ? handlePublicJsonGet('markets_data', req, res)
+    : handleJsonCollection('markets_data', req, res)
+
+  // Team handler — public GET, admin writes
+  const handleTeam = (req, res) => req.method === 'GET'
+    ? handlePublicJsonGet('team_members_data', req, res)
+    : handleJsonCollection('team_members_data', req, res)
 
   async function handleAuditLogs(req, res) {
     const decoded = requireAdmin(req, res)
@@ -637,10 +712,13 @@ import { createClient } from '@supabase/supabase-js'
     '/api/v1/services':              handleServices,
     '/api/v1/testimonials':          handleTestimonials,
     '/api/v1/audit-logs':            handleAuditLogs,
+    '/api/v1/markets':               handleMarkets,
+    '/api/v1/team':                  handleTeam,
   }
 
   export default async function handler(req, res) {
     if (handleCors(req, res)) return
+    addSecurityHeaders(res)
     const path = (req.url || '').split('?')[0].replace(/\/$/, '')
     let routeHandler = routes[path]
     if (routeHandler) return routeHandler(req, res)

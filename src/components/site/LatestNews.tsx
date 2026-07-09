@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Calendar, ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useLang } from "../../contexts/LanguageContext";
@@ -14,11 +15,56 @@ const newsEn = [
   { slug: "gold-inflation-hedge", cat: "Metals", title: "Gold as an Inflation Hedge — Is a Pullback Due?", excerpt: "We analyze the role of gold in a balanced investment portfolio in light of the latest inflation data.", date: "Jun 5, 2025", readTime: "6 min", hot: false },
 ];
 
+interface NewsItem {
+  id?: string | number;
+  slug?: string;
+  cat?: string;
+  category?: string;
+  title?: string;
+  title_en?: string;
+  excerpt?: string;
+  excerpt_en?: string;
+  body?: string;
+  date?: string;
+  created_at?: string;
+  readTime?: string;
+  read_time?: string;
+  hot?: boolean;
+  [key: string]: unknown;
+}
+
+function toNewsItem(a: NewsItem, isAr: boolean) {
+  return {
+    slug: a.slug || String(a.id || ''),
+    cat: isAr ? (a.cat || a.category || '') : (a.category || a.cat || ''),
+    title: isAr ? (a.title || '') : (a.title_en || a.title || ''),
+    excerpt: isAr ? (a.excerpt || '') : (a.excerpt_en || a.excerpt || a.body?.slice(0, 120) || ''),
+    date: a.date || (a.created_at ? new Date(a.created_at).toLocaleDateString(isAr ? 'ar-EG' : 'en-US') : ''),
+    readTime: a.readTime || a.read_time || '5 min',
+    hot: a.hot ?? false,
+  };
+}
+
 export function LatestNews() {
   const { t, lang } = useLang();
   const isAr = lang === 'ar';
-  const news = isAr ? newsAr : newsEn;
   const Arrow = isAr ? ArrowLeft : ArrowRight;
+
+  const [apiNews, setApiNews] = useState<NewsItem[] | null>(null);
+
+  useEffect(() => {
+    fetch('/api/v1/articles?limit=3&status=published')
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d.articles) && d.articles.length > 0) setApiNews(d.articles);
+      })
+      .catch(() => {});
+  }, []);
+
+  const staticNews = isAr ? newsAr : newsEn;
+  const news = apiNews && apiNews.length > 0
+    ? apiNews.slice(0, 3).map(a => toNewsItem(a, isAr))
+    : staticNews;
 
   return (
     <section className="py-24">
@@ -36,9 +82,9 @@ export function LatestNews() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
-          {news.map((n) => (
+          {news.map((n, idx) => (
             <Link
-              key={n.slug}
+              key={n.slug || idx}
               to={`/article/${n.slug}` as any}
               className="group block rounded-2xl border border-border bg-navy-mid overflow-hidden hover:border-gold hover:shadow-card transition-all hover:-translate-y-1"
             >

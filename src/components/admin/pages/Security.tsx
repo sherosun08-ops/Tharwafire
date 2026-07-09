@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { mockLogs } from '../adminData'
+import { useState, useEffect } from 'react'
 import { Shield } from 'lucide-react'
+import { getAuditLogs } from '../../../lib/api'
 
 const sessions = [
   {device:'💻',name:'Chrome — Windows 11',ip:'197.48.12.55',location:'الرياض، SA',time:'الآن',current:true},
@@ -29,6 +29,23 @@ export default function Security() {
   const [activeTab, setActiveTab] = useState<'logs'|'sessions'|'threats'|'settings'>('logs')
   const [logFilter, setLogFilter] = useState('all')
   const [sections, setSections] = useState<SecuritySection[]>(defaultSections)
+  const [realLogs, setRealLogs] = useState<{id:number;time:string;user:string;event:string;ip:string;status:'success'|'failed'}[]>([])
+  const [logsLoading, setLogsLoading] = useState(true)
+
+  useEffect(() => {
+    setLogsLoading(true)
+    getAuditLogs().then(d => {
+      const mapped = (d.logs || []).map((l: Record<string,unknown>, idx: number) => ({
+        id: Number(l.id || idx),
+        time: l.created_at ? new Date(String(l.created_at)).toLocaleString('ar-EG') : String(l.created_at || ''),
+        user: String(l.actor_email || l.actor_id || 'غير معروف'),
+        event: String(l.action || 'حدث'),
+        ip: String((l.details as Record<string,unknown>)?.ip || l.ip || 'N/A'),
+        status: String(l.action || '').includes('fail') || String(l.action || '').includes('error') ? 'failed' as const : 'success' as const,
+      }))
+      setRealLogs(mapped)
+    }).catch(() => {}).finally(() => setLogsLoading(false))
+  }, [])
 
   const toggleItem = (si: number, ii: number) => {
     setSections(prev => prev.map((s, sIdx) => sIdx !== si ? s : {
@@ -37,14 +54,15 @@ export default function Security() {
     }))
   }
 
+  const failedCount = realLogs.filter(l => l.status === 'failed').length
   const summaryCards = [
-    {label:'محاولات فاشلة اليوم',value:'3',icon:'🔴',color:'#FF4560'},
-    {label:'جلسات نشطة',value:'8',icon:'🟢',color:'#00D97E'},
-    {label:'IPs مشبوهة',value:'1',icon:'⚠️',color:'#F59E0B'},
+    {label:'محاولات فاشلة',value:String(failedCount),icon:'🔴',color:'#FF4560'},
+    {label:'إجمالي السجلات',value:String(realLogs.length),icon:'🟢',color:'#00D97E'},
+    {label:'IPs مشبوهة',value:'N/A',icon:'⚠️',color:'#F59E0B'},
     {label:'مستوى الأمان',value:'عالي',icon:'🛡️',color:'#00D97E'},
   ]
 
-  const filteredLogs = mockLogs.filter(l => logFilter==='all' || (logFilter==='failed'&&l.status==='failed') || (logFilter==='success'&&l.status==='success'))
+  const filteredLogs = realLogs.filter(l => logFilter==='all' || (logFilter==='failed'&&l.status==='failed') || (logFilter==='success'&&l.status==='success'))
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:20}}>
@@ -90,7 +108,12 @@ export default function Security() {
                 ))}</tr>
               </thead>
               <tbody>
-                {filteredLogs.map(log=>(
+                {logsLoading ? (
+                  <tr><td colSpan={6} style={{padding:24,textAlign:'center',color:'#64748B'}}>جاري التحميل...</td></tr>
+                ) : filteredLogs.length === 0 ? (
+                  <tr><td colSpan={6} style={{padding:24,textAlign:'center',color:'#64748B'}}>لا توجد سجلات</td></tr>
+                ) : null}
+              {!logsLoading && filteredLogs.map(log=>(
                   <tr key={log.id} onMouseEnter={e=>e.currentTarget.style.background='rgba(14,165,233,0.03)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
                     <td style={{padding:'10px 14px',fontSize:'0.75rem',color:'#64748B',borderBottom:'1px solid rgba(203,213,225,0.6)',fontFamily:'monospace',whiteSpace:'nowrap'}}>{log.time}</td>
                     <td style={{padding:'10px 14px',fontSize:'0.8rem',color:'#1E293B',borderBottom:'1px solid rgba(203,213,225,0.6)',fontWeight:600}}>{log.user}</td>

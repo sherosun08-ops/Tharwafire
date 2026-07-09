@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, ArrowLeft, ArrowRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useLang } from "../../contexts/LanguageContext";
@@ -59,14 +59,59 @@ const dataEn: Record<string, Row[]> = {
   ],
 };
 
+interface ApiAsset {
+  category?: string;
+  name?: string;
+  name_en?: string;
+  symbol?: string;
+  sym?: string;
+  price?: string;
+  change?: number;
+  chg?: number;
+  visible?: boolean;
+  [key: string]: unknown;
+}
+
 export function MarketsPreview() {
   const { t, lang } = useLang();
   const isAr = lang === 'ar';
-  const data = isAr ? dataAr : dataEn;
-  const tabKeys = Object.keys(data);
+  const staticData = isAr ? dataAr : dataEn;
   const Arrow = isAr ? ArrowLeft : ArrowRight;
 
+  const [apiData, setApiData] = useState<Record<string, Row[]> | null>(null);
+
+  useEffect(() => {
+    fetch('/api/v1/markets')
+      .then(r => r.json())
+      .then(d => {
+        if (!Array.isArray(d.items) || d.items.length === 0) return;
+        // Group by category
+        const grouped: Record<string, Row[]> = {};
+        for (const asset of d.items as ApiAsset[]) {
+          if (asset.visible === false) continue;
+          const cat = isAr ? (asset.category || 'أخرى') : (asset.category || 'Other');
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push({
+            name: isAr ? (asset.name || '') : (asset.name_en || asset.name || ''),
+            sym: asset.symbol || asset.sym || '',
+            price: String(asset.price || ''),
+            chg: Number(asset.change ?? asset.chg ?? 0),
+          });
+        }
+        if (Object.keys(grouped).length > 0) setApiData(grouped);
+      })
+      .catch(() => {});
+  }, [isAr]);
+
+  const data = apiData || staticData;
+  const tabKeys = Object.keys(data);
   const [tab, setTab] = useState(tabKeys[0]);
+
+  // Reset tab when data changes
+  useEffect(() => {
+    setTab(Object.keys(data)[0]);
+  }, [data]);
+
   const rows = data[tab] ?? [];
 
   return (

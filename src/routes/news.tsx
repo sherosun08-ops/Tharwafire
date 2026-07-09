@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar, ArrowLeft, ArrowRight, Search, Clock } from "lucide-react";
 import { useLang } from "../contexts/LanguageContext";
 
@@ -26,7 +26,27 @@ const articlesEn = [
 function News() {
   const { t, lang } = useLang();
   const isAr = lang === 'ar';
-  const articles = isAr ? articlesAr : articlesEn;
+  const [apiArticles, setApiArticles] = useState<typeof articlesAr | null>(null);
+  useEffect(() => {
+    fetch('/api/v1/articles?limit=20')
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d.articles) && d.articles.length > 0) {
+          setApiArticles(d.articles.map((x: Record<string, unknown>) => ({
+            slug: String(x.slug || x.id || ''),
+            cat: isAr ? String(x.cat || x.category || '') : String(x.cat_en || x.category || x.cat || ''),
+            title: isAr ? String(x.title || '') : String((x as Record<string,unknown>).title_en || x.title || ''),
+            excerpt: isAr ? String(x.excerpt || x.body || '').slice(0, 200) : String((x as Record<string,unknown>).excerpt_en || x.excerpt || x.body || '').slice(0, 200),
+            date: String(x.date || (x.created_at ? new Date(String(x.created_at)).toLocaleDateString(isAr ? 'ar-EG' : 'en-US') : '')),
+            readTime: String(x.readTime || x.read_time || '5 min'),
+            author: String(x.author || ''),
+            hot: Boolean(x.hot),
+          })));
+        }
+      })
+      .catch(() => {});
+  }, [isAr]);
+  const articles = apiArticles ?? (isAr ? articlesAr : articlesEn);
   const cats = [t('news_cat_all'), ...Array.from(new Set(articles.map((a) => a.cat)))];
   const Arrow = isAr ? ArrowLeft : ArrowRight;
 
